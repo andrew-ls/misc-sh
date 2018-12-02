@@ -1,0 +1,205 @@
+#!/bin/sh
+
+# Copyright (c) 2018 Andrew Steel <copyright@andrewsteel.net>
+#
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# The GNU General Public License Version 3 only:
+#
+# This is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License Version 3
+# as published by the Free Software Foundation.
+#
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# For the full license, see <https://www.gnu.org/licenses/>.
+
+# gnome-shell-keybindings:
+# List, export, and import GNOME keybindings.
+
+IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
+
+unset -v \
+	COLOR_BOLD \
+	COLOR_DIM \
+	COLOR_RESET
+if test -t 1; then
+	COLOR_BOLD='\033[1m'
+	COLOR_DIM='\033[2m'
+	COLOR_RESET='\033[0m'
+fi
+
+dump_keybindings() {(
+	KEYBINDINGS="${1:?}"
+	index='0'
+	for KEYBINDING in ${KEYBINDINGS}; do
+		test "${index}" -gt '0' \
+		&& printf '\n'
+		printf '[%s]\n' "$(
+			printf '%s\n' "${KEYBINDING}" \
+			| sed 's|/\(.*\)/|\1|'
+		)"
+		dconf dump "${KEYBINDING}" \
+		| tail -n '+2' \
+		| sed -n '
+			/^\[/q;
+			/./p;
+		'
+		index="$(( index + 1 ))"
+	done
+)}
+
+get_keybindings() {(
+	unarray() {(
+		# 1: Split indexes with newlines.
+		# 2: Strip array markup.
+		sed 's/'\''[^'\'']*'\''[^[:space:],]*/&\n/g' \
+		| sed '
+			s/^[[:space:]]*\[[[:space:]]*//;
+			s/[[:space:]]*\][[:space:]]*$//;
+			s/^[[:space:],]*'\''//;
+			s/'\''[[:space:],]*//;
+		'
+	)}
+	gsettings get \
+		org.gnome.settings-daemon.plugins.media-keys custom-keybindings \
+	| sed -n '/^[^@]/p' \
+	| unarray
+)}
+
+list_keybindings() {(
+	KEYBINDINGS="${1:?}"
+	index='0'
+	for KEYBINDING in ${KEYBINDINGS}; do
+		test "${index}" -gt 0 \
+		&& printf -- '--\n'
+		printf '%b/%b%s%b\n' \
+			"${COLOR_RESET}${COLOR_DIM}" \
+			"${COLOR_RESET}${COLOR_BOLD}" \
+			"$(basename "${KEYBINDING}")" \
+			"${COLOR_RESET}"
+		for KEY in 'name' 'binding' 'command'; do
+			printf '%b%s%b:%b %b%s%b\n' \
+				"${COLOR_RESET}${COLOR_BOLD}" \
+				"${KEY}" \
+				"${COLOR_RESET}${COLOR_DIM}" \
+				"${COLOR_RESET}" \
+				"${COLOR_RESET}${COLOR_DIM}" \
+				"$(
+					gsettings get \
+						"org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:${KEYBINDING}" \
+						"${KEY}" \
+				)" \
+				"${COLOR_RESET}"
+		done
+		index="$(( index + 1 ))"
+	done
+)}
+
+load_keybindings() {(
+
+# We neeed to sort the paths for the keybindings numerically. Although
+# complicated by the presence of non-numeric characters, this is still possible
+# with standard `sort`. We set the field separator to `/`, grab the 8th field,
+# and start sorting numerically (with the `-n` switch) from the 7th character.
+#
+# The diagram below depicts how the field and character counts map respectively
+# against the standard keybindings paths.
+#
+# 1 2   3     4               5       6          7                  8
+#  /org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom18/
+#                                                                   1234567
+
+	DUMP="$(cat)"
+	KEYBINDINGS_ARRAY="$(
+		KEYBINDINGS="$(
+			NEW_KEYBINDINGS="$(
+				printf '%s\n' "${DUMP}" \
+				| sed '
+					s/^[[:space:]]*//;
+					s/[[:space:]]*$//;
+				' \
+				| sed -n '/^\[/p' \
+				| sed 's|\[\(.*\)\]|/\1/|'
+			)"
+			printf '%s\n' "$(get_keybindings)" "${NEW_KEYBINDINGS}" \
+			| sed '/^$/d' \
+			| sort -n -t '/' -k 8.7 \
+			| uniq
+		)"
+		printf '%s' "['${KEYBINDINGS}']" \
+		| tr '\n' ',' \
+		| sed 's/,/'\''& '\''/g'
+	)"
+	gsettings set \
+		org.gnome.settings-daemon.plugins.media-keys custom-keybindings \
+		"${KEYBINDINGS_ARRAY}"
+	printf '%s\n' "${DUMP}" \
+	| dconf load '/'
+)}
+
+usage() {(
+	printf '%s\n' \
+		"Usage: $(basename "${0}") [OPTION]..." \
+		'' \
+		'List, export, and import GNOME keybindings.' \
+		'' \
+		'  -e, --export           export configuration to stdout' \
+		'      --help             display this help' \
+		'  -i, --import           import configuration from stdin' \
+		'  -l, --list (default)   display the current configuration'
+)}
+
+unset -v \
+	switch_mode
+while test "${#}" -gt 0; do
+	case "${1}" in
+		( '-e' \
+		| '--e' \
+		| '--ex' \
+		| '--exp' \
+		| '--expo' \
+		| '--expor' \
+		| '--export' )
+			switch_mode='export'
+			;;
+		('-g')
+			switch_mode='get'
+			;;
+		( '--h' \
+		| '--he' \
+		| '--hel' \
+		| '--help' )
+			switch_mode='help'
+			;;
+		( '-i' \
+		| '--i' \
+		| '--im' \
+		| '--imp' \
+		| '--impo' \
+		| '--impor' \
+		| '--import' )
+			switch_mode='import'
+			;;
+		( '-l' \
+		| '--l' \
+		| '--li' \
+		| '--lis' \
+		| '--list' )
+			switch_mode='list'
+			;;
+	esac
+	shift
+done
+MODE="${switch_mode:-list}"
+
+case "${MODE}" in
+	('export') dump_keybindings "$(get_keybindings)" ;;
+	('get') get_keybindings ;;
+	('help') usage ;;
+	('import') load_keybindings ;;
+	('list') list_keybindings "$(get_keybindings)" ;;
+esac
