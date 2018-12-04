@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# Searches the Steam install directory for shell scripts and finds potential
+# environment variables defined within.
+
+IFS="$(printf '\n!')"; IFS="${IFS%!}"
+
+cat $(
+	find "${STEAMROOT:-${XDG_DATA_HOME:-${HOME}/.local/share}/Steam}" \
+		-type f \
+	| grep -F '.sh'
+) \
+| sed -n 's/.*\(STEAM[_A-Z]*\).*/\1/p' \
+| LC_ALL=C sort \
+| uniq
+
