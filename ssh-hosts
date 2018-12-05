@@ -1,0 +1,90 @@
+#!/bin/sh
+
+# Copyright (c) 2018 Andrew Steel <copyright@andrewsteel.net>
+#
+# SPDX-License-Identifier: MIT
+#
+# The MIT License:
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of the Software,
+# and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+# ssh-hosts:
+# Prints a list of hosts defined in the SSH configuration files,
+# along with associated comments for each host (if any).
+
+IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
+
+unset -v \
+	COLOR \
+	COLOR_BOLD \
+	COLOR_DIM \
+	COLOR_RESET
+if test -t 1; then
+	COLOR='always'
+	COLOR_BOLD="$(printf '%b' '\033[1m')"
+	COLOR_DIM="$(printf '%b' '\033[2m')"
+	COLOR_RESET="$(printf '%b' '\033[0m')"
+else
+	COLOR='never'
+fi
+
+test "${SSH_CONFIGS}" \
+|| SSH_CONFIGS="/etc/ssh/ssh_config:${HOME}/.ssh/config"
+
+HOSTS="$(
+	IFS=':'
+	cat ${SSH_CONFIGS} \
+	| grep '^Host[[:space:]]' \
+	| awk '{ print $2 }' \
+	| awk '! uniq[$0]++' \
+	| sort
+)"
+
+IFS="$(printf '\n!')"; IFS="${IFS%!}"
+for HOST in ${HOSTS}; do
+
+	printf "%b%s%b" \
+		"${COLOR_BOLD}" \
+		"${HOST}" \
+		"${COLOR_RESET}"
+
+	COMMENT="$(
+		IFS=':'
+		cat ${SSH_CONFIGS} \
+		| grep '^Host[[:space:]]\{1,\}'"${HOST}"'[[:space:]]\{1,\}' \
+		| sed -n '$ p' \
+		| awk -F '#' '{ print $2 }' \
+		| sed '
+			s/^[[:space:]]*//;
+			s/[[:space:]]*$//;
+		'
+	)"
+	test "${COMMENT}" \
+	&& printf '%b%s%b %b%s%b' \
+		"${COLOR_DIM}" \
+		':' \
+		"${COLOR_RESET}" \
+		"${COLOR_DIM}" \
+		"${COMMENT}" \
+		"${COLOR_RESET}" \
+
+	echo
+
+done
