@@ -3,14 +3,56 @@
 # Searches the Steam install directory for shell scripts and finds potential
 # environment variables defined within.
 
-IFS="$(printf '\n!')"; IFS="${IFS%!}"
+IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
 
-cat $(
-	find "${STEAMROOT:-${XDG_DATA_HOME:-${HOME}/.local/share}/Steam}" \
-		-type f \
-	| grep -F '.sh'
-) \
-| sed -n 's/.*\(STEAM[_A-Z]*\).*/\1/p' \
-| LC_ALL=C sort \
-| uniq
+unset -v \
+	switch_count
+while test "${#}" -gt '0'; do
+	case "${1}" in
+		( '-c' \
+		| '--c' \
+		| '--co' \
+		| '--cou' \
+		| '--coun' \
+		| '--count' )
+			switch_count='TRUE'
+			;;
+		(*)
+			printf '%s: %s\n' \
+				"$(basename "${0}")" \
+				'unrecognized option '\'"${1}"\' \
+				>&2
+			echo >&2
+			printf '%s:\n' 'Usage' >&2
+			printf '%4s, %-11s %s\n' \
+				'-c' \
+				'--count' \
+				'display and sort by descending occurrence counts' \
+				>&2
+			exit
+			;;
+	esac
+	shift
+done
+PARAM_COUNT="${switch_count}"
+
+(
+	IFS="$(printf '\n!')"; IFS="${IFS%!}"
+
+	cat $(
+		find "${STEAMROOT:-${XDG_DATA_HOME:-${HOME}/.local/share}/Steam}" \
+			-type f \
+		| grep -F '.sh'
+	) \
+	| sed -n 's/.*\(STEAM[_A-Z]*\).*/\1/p' \
+	| LC_ALL=C sort \
+	| (
+		if test "${PARAM_COUNT}"; then
+			uniq -c \
+			| sort -nr
+		else
+			uniq
+		fi
+	)
+)
 
