@@ -17,18 +17,32 @@ while test "${#}" -gt '0'; do
 		| '--count' )
 			switch_count='TRUE'
 			;;
+		( '--h' \
+		| '--he' \
+		| '--hel' \
+		| '--help' )
+			printf '%s:\n' 'Usage'
+			printf '  %s [%s]...\n' \
+				"$(basename "${0}")" \
+				'OPTION'
+			echo
+			printf '%s:\n' 'Options'
+			printf '%5s %-11s %s\n' \
+				'-c,' \
+				'--count' \
+				'display and sort by descending occurrence counts' \
+				'' \
+				'--help' \
+				'print this and exit'
+			exit
+			;;
 		(*)
 			printf '%s: %s\n' \
 				"$(basename "${0}")" \
 				'unrecognized option '\'"${1}"\' \
 				>&2
 			echo >&2
-			printf '%s:\n' 'Usage' >&2
-			printf '%4s, %-11s %s\n' \
-				'-c' \
-				'--count' \
-				'display and sort by descending occurrence counts' \
-				>&2
+			"${0}" --help >&2
 			exit
 			;;
 	esac
