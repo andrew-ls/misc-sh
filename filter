@@ -1,0 +1,143 @@
+#!/bin/sh
+
+# Copyright (c) 2018 Andrew Steel <copyright@andrewsteel.net>
+#
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# The GNU General Public License Version 3 only:
+#
+# This is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License Version 3
+# as published by the Free Software Foundation.
+#
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# For the full license, see <https://www.gnu.org/licenses/>.
+
+# filter:
+# Read standard input, apply filters from a built-in library,
+# and print the result to standard output.
+
+IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
+
+unset -v \
+	filters \
+	switches
+while test "${#}" -gt '0'; do
+	if \
+		test "${1%"${1#??}"}" != "--" \
+		&& test "${1%"${1#?}"}" = "-" \
+		&& test "$(printf '%s' "${1#?}" | wc -m)" -gt '0'
+	then
+		switches=''
+		for OPTION in $(printf '%s' "${1#?}" | fold -w '1'); do
+			case "${OPTION}" in
+				('q') switches="${switches:+${switches} }--quotes" ;;
+				('w') switches="${switches:+${switches} }--whitespace" ;;
+				(*)
+					printf '%s: %s\n' \
+						"$(basename "${0}")" \
+						'invalid option '\'"-${OPTION}"\' \
+						>&2
+					echo >&2
+					"${0}" --help >&2
+					exit
+					;;
+			esac
+		done
+		shift
+		set -- ${switches} "${@}"
+	fi
+	case "${1}" in
+		( '--h' \
+		| '--he' \
+		| '--hel' \
+		| '--help' )
+			printf 'Usage: %s [%s]...\n' \
+				"$(basename "${0}")" \
+				'OPTION'
+			echo
+			printf '%s\n' \
+				'With no OPTION, OPTION is equivalent to '\''-wqw'\''.'
+			echo
+			printf '%s\n' \
+				'Read standard input, apply filters from a built-in library, and print the' \
+				'result to standard output. Filters are applied in the order of the passed' \
+				'options, and may be repeated by specifying the same option multiple times.'
+			echo
+			printf '%s:\n' 'Options'
+			printf '%5s %-15s %s\n' \
+				'' '--help' \
+					'print this and exit' \
+				'-q,' '--quotes' \
+					'remove matching pair of surrounding quotes' \
+				'-w,' '--whitespace' \
+					'remove leading and trailing whitespace'
+			exit
+			;;
+		( '--q' \
+		| '--qu' \
+		| '--quo' \
+		| '--quot' \
+		| '--quote' \
+		| '--quotes' )
+			filters="${filters:+${filters} }quotes"
+			;;
+		( '--w' \
+		| '--wh' \
+		| '--whi' \
+		| '--whit' \
+		| '--white' \
+		| '--whites' \
+		| '--whitesp' \
+		| '--whitespa' \
+		| '--whitespac' \
+		| '--whitespace' )
+			filters="${filters:+${filters} }whitespace"
+			;;
+		(*)
+			printf '%s: %s\n' \
+				"$(basename "${0}")" \
+				'unrecognized option '\'"${1}"\' \
+				>&2
+			echo >&2
+			"${0}" --help >&2
+			exit
+			;;
+	esac
+	shift
+done
+FILTERS="${filters:-whitespace quotes whitespace}"
+INPUT="$(cat)"
+
+output="${INPUT}"
+for FILTER in ${FILTERS}; do
+	case "${FILTER}" in
+
+		('quotes')
+			output="$(
+				printf '%s' "${output}" \
+				| sed '
+					s/^\(["'\''＂]\)\(.*\)\1$/\2/g;
+				'
+			)"
+			;;
+
+		('whitespace')
+			output="$(
+				printf '%s' "${output}" \
+				| sed '
+					s/^[[:space:]]*//g;
+					s/[[:space:]]*$//g;
+				'
+			)"
+			;;
+
+	esac
+done
+OUTPUT="${output}"
+
+printf '%s\n' "${OUTPUT}"
