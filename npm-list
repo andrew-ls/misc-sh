@@ -1,0 +1,92 @@
+#!/bin/sh
+
+# Copyright (c) 2018 Andrew Steel <copyright@andrewsteel.net>
+#
+# SPDX-License-Identifier: MIT
+#
+# The MIT License:
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of the Software,
+# and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+# npm-list:
+# Lists installed NPM packages.
+
+IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
+
+unset -v \
+	COLOR \
+	COLOR_BOLD \
+	COLOR_DIM \
+	COLOR_RESET
+if test -t 1; then
+	COLOR='always'
+	COLOR_BOLD="$(printf '%b' '\033[1m')"
+	COLOR_DIM="$(printf '%b' '\033[2m')"
+	COLOR_RESET="$(printf '%b' '\033[0m')"
+else
+	COLOR='never'
+fi
+
+unset -v \
+	switch_global
+while test "${#}" -gt '0'; do
+	case "${1}" in
+		( '-g' \
+		| '--g' \
+		| '--gl' \
+		| '--glo' \
+		| '--glob' \
+		| '--globa' \
+		| '--global' )
+			switch_global='TRUE'
+			;;
+	esac
+	shift
+done
+GLOBAL="${switch_global:-}"
+
+PACKAGES="$(
+	(
+		if test "${GLOBAL}"; then
+			npm ls --parseable --long --depth '0' --global
+		else
+			npm ls --parseable --long --depth '0'
+		fi
+	) \
+	| tail -n '+2' \
+	| cut -s -d ':' -f '2'
+)"
+
+IFS="$(printf '\n!')"; IFS="${IFS%!}"
+for PACKAGE in ${PACKAGES}; do
+
+	NAME="$(printf '%s' "${PACKAGE}" | cut -s -d '@' -f '1')"
+	VERSION="$(printf '%s' "${PACKAGE}" | cut -s -d '@' -f '2')"
+
+	printf '%b%s%b:%b %b%s%b\n' \
+		"${COLOR_RESET}${COLOR_BOLD}" \
+		"${NAME}" \
+		"${COLOR_RESET}${COLOR_DIM}" \
+		"${COLOR_RESET}" \
+		"${COLOR_RESET}${COLOR_DIM}" \
+		"${VERSION}" \
+		"${COLOR_RESET}"
+
+done
