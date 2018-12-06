@@ -20,6 +20,10 @@
 # filter:
 # Read standard input, apply filters from a built-in library,
 # and print the result to standard output.
+#
+# TODO:
+# * Add alternate `--quotes` filter, for removing asymmetrical quotes:
+#       «»‘’‚‛“”„‟‹›❛❜❝❞❟❠❮❯⹂〝〞〟🙶🙷🙸
 
 IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
 
