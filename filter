@@ -39,6 +39,7 @@ while test "${#}" -gt '0'; do
 		switches=''
 		for OPTION in $(printf '%s' "${1#?}" | fold -w '1'); do
 			case "${OPTION}" in
+				('d') switches="${switches:+${switches} }--dos-newlines" ;;
 				('q') switches="${switches:+${switches} }--quotes" ;;
 				('u') switches="${switches:+${switches} }--unix-newlines" ;;
 				('w') switches="${switches:+${switches} }--whitespace" ;;
@@ -57,6 +58,20 @@ while test "${#}" -gt '0'; do
 		set -- ${switches} "${@}"
 	fi
 	case "${1}" in
+		( '--d' \
+		| '--do' \
+		| '--dos' \
+		| '--dos-' \
+		| '--dos-n' \
+		| '--dos-ne' \
+		| '--dos-new' \
+		| '--dos-newl' \
+		| '--dos-newli' \
+		| '--dos-newlin' \
+		| '--dos-newline' \
+		| '--dos-newlines' )
+			filters="${filters:+${filters} }dos-newlines"
+			;;
 		( '--h' \
 		| '--he' \
 		| '--hel' \
@@ -77,6 +92,8 @@ while test "${#}" -gt '0'; do
 			printf '%5s %-17s %s\n' \
 				'' '--help' \
 					'print this and exit' \
+				'-d,' '--dos-newlines' \
+					'converts to DOS-style newlines (LF to CR LF)' \
 				'-q,' '--quotes' \
 					'remove matching pair of surrounding quotes' \
 				'-u,' '--unix-newlines' \
@@ -138,6 +155,15 @@ INPUT="$(cat)"
 output="${INPUT}"
 for FILTER in ${FILTERS}; do
 	case "${FILTER}" in
+
+		('dos-newlines')
+			output="$(
+				printf '%s' "${output}" \
+				| sed '
+					/[^\r]$/s/$/\r/g;
+				'
+			)"
+			;;
 
 		('quotes')
 			output="$(
