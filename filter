@@ -40,6 +40,7 @@ while test "${#}" -gt '0'; do
 		for OPTION in $(printf '%s' "${1#?}" | fold -w '1'); do
 			case "${OPTION}" in
 				('q') switches="${switches:+${switches} }--quotes" ;;
+				('u') switches="${switches:+${switches} }--unix-newlines" ;;
 				('w') switches="${switches:+${switches} }--whitespace" ;;
 				(*)
 					printf '%s: %s\n' \
@@ -65,7 +66,7 @@ while test "${#}" -gt '0'; do
 				'OPTION'
 			echo
 			printf '%s\n' \
-				'With no OPTION, OPTION is equivalent to '\''-wqw'\''.'
+				'With no OPTION, OPTION is equivalent to '\''-uwqw'\''.'
 			echo
 			printf '%s\n' \
 				'Read standard input, apply filters from a built-in library, and print the' \
@@ -73,11 +74,13 @@ while test "${#}" -gt '0'; do
 				'options, and may be repeated by specifying the same option multiple times.'
 			echo
 			printf '%s:\n' 'Options'
-			printf '%5s %-15s %s\n' \
+			printf '%5s %-17s %s\n' \
 				'' '--help' \
 					'print this and exit' \
 				'-q,' '--quotes' \
 					'remove matching pair of surrounding quotes' \
+				'-u,' '--unix-newlines' \
+					'converts to UNIX-style newlines (CR LF to LF)' \
 				'-w,' '--whitespace' \
 					'remove leading and trailing whitespace'
 			exit
@@ -89,6 +92,21 @@ while test "${#}" -gt '0'; do
 		| '--quote' \
 		| '--quotes' )
 			filters="${filters:+${filters} }quotes"
+			;;
+		( '--u' \
+		| '--un' \
+		| '--uni' \
+		| '--unix' \
+		| '--unix-' \
+		| '--unix-n' \
+		| '--unix-ne' \
+		| '--unix-new' \
+		| '--unix-newl' \
+		| '--unix-newli' \
+		| '--unix-newlin' \
+		| '--unix-newline' \
+		| '--unix-newlines' )
+			filters="${filters:+${filters} }unix-newlines"
 			;;
 		( '--w' \
 		| '--wh' \
@@ -114,7 +132,7 @@ while test "${#}" -gt '0'; do
 	esac
 	shift
 done
-FILTERS="${filters:-whitespace quotes whitespace}"
+FILTERS="${filters:-unix-newlines whitespace quotes whitespace}"
 INPUT="$(cat)"
 
 output="${INPUT}"
@@ -126,6 +144,15 @@ for FILTER in ${FILTERS}; do
 				printf '%s' "${output}" \
 				| sed '
 					s/^\(["'\''＂]\)\(.*\)\1$/\2/g;
+				'
+			)"
+			;;
+
+		('unix-newlines')
+			output="$(
+				printf '%s' "${output}" \
+				| sed '
+					s/\r$//g;
 				'
 			)"
 			;;
