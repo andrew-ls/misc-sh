@@ -1,0 +1,114 @@
+#!/bin/sh
+
+# Copyright (c) 2018 Andrew Steel <copyright@andrewsteel.net>
+#
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# The GNU General Public License Version 3 only:
+#
+# This is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License Version 3
+# as published by the Free Software Foundation.
+#
+# This software is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# For the full license, see <https://www.gnu.org/licenses/>.
+
+# xrandr-profile:
+# Sets the XRandR scaling factor based on monitor profiles.
+
+IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
+export LC_ALL='C'
+
+unset -v \
+	RESET
+unset -v \
+	reset
+while test "${#}" -gt '0'; do
+	case "${1}" in
+		( '-r' \
+		| '--r' \
+		| '--re' \
+		| '--res' \
+		| '--rese' \
+		| '--reset' )
+			reset='TRUE'
+			;;
+	esac
+	shift
+done
+RESET="${reset}"
+
+get_primary_display_id_dev() {(
+	IFS="$(printf '\n!')"; IFS="${IFS%!}"
+
+	printf '%s\n' "$(
+		for DIR in $(
+			find '/sys/devices' -type 'd' \
+			| sort
+		); do
+			if \
+				test -f "${DIR}"'/edid' \
+				&& test "$(cat "${DIR}"'/enabled')" = 'enabled'
+			then
+				basename "$(printf '%s\n' "${DIR}")"
+			fi
+		done
+	)" \
+	| head -n '1'
+)}
+
+get_primary_display_id_xrandr() {(
+	xrandr -q \
+	| sed -n '
+		s/^\([^[:space:]]\{1,\}\)[[:space:]]\{1,\}connected[[:space:]]\{1,\}primary[[:space:]]\{1,\}.*/\1/p;
+	' \
+	| sort \
+	| head -n '1'
+)}
+
+get_display_name() {(
+	DISPLAY_ID_DEV="${1:?}"
+	< "$(
+		find '/sys/devices' -type 'd' \
+		| grep "${DISPLAY_ID_DEV}"'$' \
+		| sort \
+		| head -n '1'
+	)"'/edid' \
+	edid-decode \
+	| grep '^Monitor name:' \
+	| cut -d ':' -f '2-' \
+	| sed '
+		s/^[[:space:]]*//;
+		s/[[:space:]]$//;
+	'
+)}
+
+if test "${XDG_SESSION_TYPE}" = 'x11'; then
+
+	DISPLAY_ID="$(get_primary_display_id_xrandr)"
+	DISPLAY_NAME="$(get_display_name "$(get_primary_display_id_dev)")"
+
+	if test "${RESET}"; then
+
+		xrandr --output "${DISPLAY_ID}" --scale 1x1
+
+	else
+
+		case "${DISPLAY_NAME}" in
+
+			('LG Ultra HD')
+				xrandr --output "${DISPLAY_ID}" --scale 1.5x1.5
+				gsettings set \
+					org.gnome.settings-daemon.plugins.xsettings overrides \
+					'[{'\''Gdk/WindowScalingFactor'\'', <2>}]'
+				;;
+
+		esac
+
+	fi
+
+fi
