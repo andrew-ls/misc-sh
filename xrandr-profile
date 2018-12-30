@@ -23,10 +23,14 @@
 IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
 export LC_ALL='C'
 
+TEMP_DIR='/tmp/xrandr-profile'
+
 unset -v \
-	RESET
+	ACTION
 unset -v \
-	reset
+	reset_scale \
+	scale \
+	toggle_scale
 while test "${#}" -gt '0'; do
 	case "${1}" in
 		( '-r' \
@@ -34,13 +38,47 @@ while test "${#}" -gt '0'; do
 		| '--re' \
 		| '--res' \
 		| '--rese' \
-		| '--reset' )
-			reset='TRUE'
+		| '--reset' \
+		| '--reset-' \
+		| '--reset-s' \
+		| '--reset-sc' \
+		| '--reset-sca' \
+		| '--reset-scal' \
+		| '--reset-scale' )
+			reset_scale='TRUE'
+			;;
+		( '-s' \
+		| '--s' \
+		| '--sc' \
+		| '--sca' \
+		| '--scal' \
+		| '--scale' )
+			scale='TRUE'
+			;;
+		( '-t' \
+		| '--t' \
+		| '--to' \
+		| '--tog' \
+		| '--togg' \
+		| '--toggl' \
+		| '--toggle-' \
+		| '--toggle-s' \
+		| '--toggle-sc' \
+		| '--toggle-sca' \
+		| '--toggle-scal' \
+		| '--toggle-scale' )
+			toggle_scale='TRUE'
 			;;
 	esac
 	shift
 done
-RESET="${reset}"
+if test "${reset_scale}"; then
+	ACTION='reset-scale'
+elif test "${scale}"; then
+	ACTION='scale'
+elif test "${toggle_scale}"; then
+	ACTION='toggle-scale'
+fi
 
 get_primary_display_id_dev() {(
 	IFS="$(printf '\n!')"; IFS="${IFS%!}"
@@ -87,16 +125,26 @@ get_display_name() {(
 	'
 )}
 
+mkdir -p "${TEMP_DIR}"
 if test "${XDG_SESSION_TYPE}" = 'x11'; then
 
 	DISPLAY_ID="$(get_primary_display_id_xrandr)"
 	DISPLAY_NAME="$(get_display_name "$(get_primary_display_id_dev)")"
 
-	if test "${RESET}"; then
+	if test "${ACTION}" = 'toggle-scale'; then
+		if test -f "${TEMP_DIR}"'/state'; then
+			ACTION='reset-scale'
+		else
+			ACTION='scale'
+		fi
+	fi
+
+	if test "${ACTION}" = 'reset-scale'; then
 
 		xrandr --output "${DISPLAY_ID}" --scale 1x1
+		rm "${TEMP_DIR}"'/state'
 
-	else
+	elif test "${ACTION}" = 'scale'; then
 
 		case "${DISPLAY_NAME}" in
 
@@ -105,6 +153,7 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 				gsettings set \
 					org.gnome.settings-daemon.plugins.xsettings overrides \
 					'[{'\''Gdk/WindowScalingFactor'\'', <2>}]'
+				echo 'scaled' > "${TEMP_DIR}"'/state'
 				;;
 
 		esac
