@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2018 Andrew Steel <copyright@andrewsteel.net>
+# Copyright (c) 2018-2019 Andrew Steel <copyright@andrewsteel.net>
 #
 # SPDX-License-Identifier: GPL-3.0-only
 #
@@ -108,6 +108,24 @@ get_primary_display_id_xrandr() {(
 	| head -n '1'
 )}
 
+get_display_manufacturer_model() {(
+	DISPLAY_ID_DEV="${1:?}"
+	< "$(
+		find '/sys/devices' -type 'd' \
+		| grep "${DISPLAY_ID_DEV}"'$' \
+		| sort \
+		| head -n '1'
+	)"'/edid' \
+	edid-decode \
+	| grep '^Manufacturer:' \
+	| cut -d ':' -f '2-' \
+	| sed 's/\(.*\)Serial Number.*/\1/' \
+	| sed '
+		s/^[[:space:]]*//;
+		s/[[:space:]]$//;
+	'
+)}
+
 get_display_name() {(
 	DISPLAY_ID_DEV="${1:?}"
 	< "$(
@@ -130,6 +148,9 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 
 	DISPLAY_ID="$(get_primary_display_id_xrandr)"
 	DISPLAY_NAME="$(get_display_name "$(get_primary_display_id_dev)")"
+	if ! test "${DISPLAY_NAME}"; then
+		DISPLAY_NAME="$(get_display_manufacturer_model "$(get_primary_display_id_dev)")"
+	fi
 
 	if test "${ACTION}" = 'toggle-scale'; then
 		if test -f "${TEMP_DIR}"'/state'; then
@@ -148,7 +169,7 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 
 		case "${DISPLAY_NAME}" in
 
-			('LG Ultra HD')
+			('LG Ultra HD' | 'GSM Model 5b09')
 				xrandr --output "${DISPLAY_ID}" --scale 1.5x1.5
 				gsettings set \
 					org.gnome.settings-daemon.plugins.xsettings overrides \
