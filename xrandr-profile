@@ -169,6 +169,10 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 
 		case "${DISPLAY_NAME}" in
 
+			('GPD Win 2' | 'LTM Model 3937')
+				xrandr --orientation right
+				;;
+
 			('LG Ultra HD' | 'GSM Model 5b09')
 				xrandr --output "${DISPLAY_ID}" --scale 1.5x1.5
 				gsettings set \
