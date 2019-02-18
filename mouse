@@ -1,0 +1,19 @@
+#!/bin/sh
+
+IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
+
+CURRENT_DESKTOP="$(
+	# Handles prefixes such as 'ubuntu:GNOME'
+	printf '%s' "${XDG_CURRENT_DESKTOP}" \
+	| tr ':' '\n' \
+	| tail -n '1'
+)"
+
+case "${CURRENT_DESKTOP}" in
+
+	('GNOME')
+		gsettings set org.gnome.desktop.peripherals.mouse speed '-0.5'
+		;;
+	
+esac
+
