@@ -30,6 +30,7 @@ unset -v \
 unset -v \
 	reset_scale \
 	scale \
+	toggle_dpi \
 	toggle_scale
 while test "${#}" -gt '0'; do
 	case "${1}" in
@@ -61,8 +62,21 @@ while test "${#}" -gt '0'; do
 		| '--tog' \
 		| '--togg' \
 		| '--toggl' \
-		| '--toggle-' \
-		| '--toggle-s' \
+		| '--toggle-' )
+			printf '%s: %s: '\''%s'\'' '\''%s'\''\n' \
+				'xrandr-profile' \
+				'option '\'"${1}"\'' is ambiguous; possibilities' \
+				'--toggle-dpi' \
+				'--toggle-scale' \
+				>&2
+			exit 1
+			;;
+		( '--toggle-d' \
+		| '--toggle-dp' \
+		| '--toggle-dpi' )
+			toggle_dpi='TRUE'
+			;;
+		( '--toggle-s' \
 		| '--toggle-sc' \
 		| '--toggle-sca' \
 		| '--toggle-scal' \
@@ -76,6 +90,8 @@ if test "${reset_scale}"; then
 	ACTION='reset-scale'
 elif test "${scale}"; then
 	ACTION='scale'
+elif test "${toggle_dpi}"; then
+	ACTION='toggle-dpi'
 elif test "${toggle_scale}"; then
 	ACTION='toggle-scale'
 fi
@@ -152,6 +168,17 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 		DISPLAY_NAME="$(get_display_manufacturer_model "$(get_primary_display_id_dev)")"
 	fi
 
+	if test "${ACTION}" = 'toggle-dpi'; then
+		if \
+			test -f "${TEMP_DIR}"'/state' \
+			&& test "$(cat "${TEMP_DIR}"'/state')" != 'scale'
+		then
+			ACTION='scale'
+		else
+			ACTION='dpi-96'
+		fi
+	fi
+
 	if test "${ACTION}" = 'toggle-scale'; then
 		if test -f "${TEMP_DIR}"'/state'; then
 			ACTION='reset-scale'
@@ -160,29 +187,40 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 		fi
 	fi
 
-	if test "${ACTION}" = 'reset-scale'; then
+	case "${ACTION}" in
 
-		xrandr --output "${DISPLAY_ID}" --scale 1x1
-		rm "${TEMP_DIR}"'/state'
+		('dpi-96')
+			case "${DISPLAY_NAME}" in
+				('LG Ultra HD' | 'GSM Model 5b09')
+					xrandr --output "${DISPLAY_ID}" --scale '0.66666666x0.66666666'
+					gsettings set \
+						org.gnome.settings-daemon.plugins.xsettings overrides \
+						'[{'\''Gdk/WindowScalingFactor'\'', <1>}]'
+					echo 'dpi-96' > "${TEMP_DIR}"'/state'
+					;;
+			esac
+			;;
 
-	elif test "${ACTION}" = 'scale'; then
+		('reset-scale')
+			xrandr --output "${DISPLAY_ID}" --scale '1x1'
+			rm "${TEMP_DIR}"'/state'
+			;;
 
-		case "${DISPLAY_NAME}" in
+		('scale')
+			case "${DISPLAY_NAME}" in
+				('GPD Win 2' | 'LTM Model 3937')
+					xrandr --orientation 'right'
+					;;
+				('LG Ultra HD' | 'GSM Model 5b09')
+					xrandr --output "${DISPLAY_ID}" --scale '1.5x1.5'
+					gsettings set \
+						org.gnome.settings-daemon.plugins.xsettings overrides \
+						'[{'\''Gdk/WindowScalingFactor'\'', <2>}]'
+					echo 'scale' > "${TEMP_DIR}"'/state'
+					;;
+			esac
+			;;
 
-			('GPD Win 2' | 'LTM Model 3937')
-				xrandr --orientation right
-				;;
-
-			('LG Ultra HD' | 'GSM Model 5b09')
-				xrandr --output "${DISPLAY_ID}" --scale 1.5x1.5
-				gsettings set \
-					org.gnome.settings-daemon.plugins.xsettings overrides \
-					'[{'\''Gdk/WindowScalingFactor'\'', <2>}]'
-				echo 'scaled' > "${TEMP_DIR}"'/state'
-				;;
-
-		esac
-
-	fi
+	esac
 
 fi
