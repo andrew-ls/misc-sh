@@ -192,14 +192,18 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 		('dpi-96')
 			case "${DISPLAY_NAME}" in
 				('HP Spectre x360 13-ae003na' | 'LGD Model 588')
-					xrandr --output "${DISPLAY_ID}" --scale '0.5x0.5'
+					xrandr --output "${DISPLAY_ID}" \
+						--mode '1920x1080' \
+						--scale '1x1'
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
 						'[{'\''Gdk/WindowScalingFactor'\'', <1>}]'
 					echo 'dpi-96' > "${TEMP_DIR}"'/state'
 					;;
 				('LG Ultra HD' | 'GSM Model 5b09')
-					xrandr --output "${DISPLAY_ID}" --scale '0.66666666x0.66666666'
+					xrandr --output "${DISPLAY_ID}" \
+						--mode '2560x1440' \
+						--scale '1x1'
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
 						'[{'\''Gdk/WindowScalingFactor'\'', <1>}]'
@@ -219,14 +223,18 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					xrandr --orientation 'right'
 					;;
 				('HP Spectre x360 13-ae003na' | 'LGD Model 588')
-					xrandr --output "${DISPLAY_ID}" --scale '1x1'
+					xrandr --output "${DISPLAY_ID}" \
+						--mode '3840x2160' \
+						--scale '1x1'
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
 						'[{'\''Gdk/WindowScalingFactor'\'', <2>}]'
 					echo 'scale' > "${TEMP_DIR}"'/state'
 					;;
 				('LG Ultra HD' | 'GSM Model 5b09')
-					xrandr --output "${DISPLAY_ID}" --scale '1.5x1.5'
+					xrandr --output "${DISPLAY_ID}" \
+						--mode '3840x2160' \
+						--scale '1.5x1.5'
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
 						'[{'\''Gdk/WindowScalingFactor'\'', <2>}]'
