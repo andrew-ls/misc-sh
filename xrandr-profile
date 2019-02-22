@@ -187,11 +187,16 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 		fi
 	fi
 
+	DISPLAY_NAME_FRIENDLY="$(case "${DISPLAY_NAME}" in
+		('LTM Model 3937') echo 'GPD Win 2' ;;
+		('LGD Model 588') echo 'HP Spectre x360 13-ae003na' ;;
+		('LG Ultra HD' | 'GSM Model 5b09') echo 'LG 27UD68P 4K Monitor' ;;
+	esac)"
 	case "${ACTION}" in
 
 		('dpi-96')
-			case "${DISPLAY_NAME}" in
-				('HP Spectre x360 13-ae003na' | 'LGD Model 588')
+			case "${DISPLAY_NAME_FRIENDLY}" in
+				('HP Spectre x360 13-ae003na')
 					xrandr --output "${DISPLAY_ID}" \
 						--mode '1920x1080' \
 						--scale '1x1'
@@ -200,7 +205,7 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 						'[{'\''Gdk/WindowScalingFactor'\'', <1>}]'
 					echo 'dpi-96' > "${TEMP_DIR}"'/state'
 					;;
-				('LG Ultra HD' | 'GSM Model 5b09')
+				('LG 27UD68P 4K Monitor')
 					xrandr --output "${DISPLAY_ID}" \
 						--mode '2560x1440' \
 						--scale '1x1'
@@ -218,11 +223,11 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 			;;
 
 		('scale')
-			case "${DISPLAY_NAME}" in
-				('GPD Win 2' | 'LTM Model 3937')
+			case "${DISPLAY_NAME_FRIENDLY}" in
+				('GPD Win 2')
 					xrandr --orientation 'right'
 					;;
-				('HP Spectre x360 13-ae003na' | 'LGD Model 588')
+				('HP Spectre x360 13-ae003na')
 					xrandr --output "${DISPLAY_ID}" \
 						--mode '3840x2160' \
 						--scale '1x1'
@@ -231,7 +236,7 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 						'[{'\''Gdk/WindowScalingFactor'\'', <2>}]'
 					echo 'scale' > "${TEMP_DIR}"'/state'
 					;;
-				('LG Ultra HD' | 'GSM Model 5b09')
+				('LG 27UD68P 4K Monitor')
 					xrandr --output "${DISPLAY_ID}" \
 						--mode '3840x2160' \
 						--scale '1.5x1.5'
