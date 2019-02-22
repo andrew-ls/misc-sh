@@ -192,6 +192,22 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 		('LGD Model 588') echo 'HP Spectre x360 13-ae003na' ;;
 		('LG Ultra HD' | 'GSM Model 5b09') echo 'LG 27UD68P 4K Monitor' ;;
 	esac)"
+	DISPLAY_RATIO="$(case "${DISPLAY_NAME_FRIENDLY}" in
+		('GPD Win 2') echo '16x9' ;;
+		('HP Spectre x360 13-ae003na') echo '16x9' ;;
+		('LG 27UD68P 4K Monitor') echo '16x9' ;;
+	esac)"
+	DISPLAY_SCALE="$(case "${DISPLAY_NAME_FRIENDLY}" in
+		('GPD Win 2') echo '1' ;;
+		('HP Spectre x360 13-ae003na') echo '2' ;;
+		('LG 27UD68P 4K Monitor') echo '1.5' ;;
+	esac)"
+	DISPLAY_SIZE="$(case "${DISPLAY_NAME_FRIENDLY}" in
+		('GPD Win 2') echo '6' ;;
+		('HP Spectre x360 13-ae003na') echo '13.3' ;;
+		('LG 27UD68P 4K Monitor') echo '27' ;;
+	esac)"
+
 	case "${ACTION}" in
 
 		('dpi-96')
