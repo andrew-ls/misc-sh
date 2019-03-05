@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Prints locations of registered GNOME Builder projects.
+
+< "${XDG_DATA_HOME:-${HOME}/.local/share}/gnome-builder/recent-projects.xbel" \
+awk '
+	/<bookmark[^>]+href=[^>]*>/ {
+		file = $0;
+		sub(/^.*href="/, "", file);
+		sub(/".*$/, "", file);
+		sub(/^file:\/\//, "", file);
+		print(file);
+	}
+' \
+| sort
+
