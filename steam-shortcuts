@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Prints Steam's non-Steam shortcut data.
+
+# Replaces 'Null', 'Start of Heading', and 'Backspace' characters.
+# Squashes multiple empty lines into single ones.
+< "${XDG_DATA_HOME:-${HOME}/.local/share}/Steam/userdata/${STEAMID3:?}/config/shortcuts.vdf" \
+tr '\000\001\008' ':\n\n' \
+| sed '/^$/N;/^\n$/D'
+echo
+
