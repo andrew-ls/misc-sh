@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Reinstalls all default packages for Fedora Workstation.
+# Reads DNF-style exclude definitions in ~/.fedora-reinstall-exclude.
+# Example excludes:
+#     gnome-classic-session
+#     gnome-shell-extension-*
+
+IFS="$(printf '%b' '\n!')"; IFS="${IFS%!}"
+
+EXCLUDE_CONFIG="${HOME}/.fedora-reinstall-exclude"
+
+unset -v \
+	EXCLUDES
+if \
+	test -f "${EXCLUDE_CONFIG}" \
+	&& test -r "${EXCLUDE_CONFIG}"
+then
+	EXCLUDES="$(
+		< "${EXCLUDE_CONFIG}" \
+		grep -v '^$' \
+		| sed "s/.*/--exclude\\n'&'/"
+	)"
+fi
+
+eval sudo dnf groupinstall ${EXCLUDES} \'Fedora Workstation\'
+
