@@ -40,6 +40,7 @@ while test "${#}" -gt '0'; do
 		for OPTION in $(printf '%s' "${1#?}" | fold -w '1'); do
 			case "${OPTION}" in
 				('d') switches="${switches:+${switches} }--dos-newlines" ;;
+				('l') switches="${switches:+${switches} }--line-numbers" ;;
 				('q') switches="${switches:+${switches} }--quotes" ;;
 				('u') switches="${switches:+${switches} }--unix-newlines" ;;
 				('w') switches="${switches:+${switches} }--whitespace" ;;
@@ -94,6 +95,8 @@ while test "${#}" -gt '0'; do
 					'print this and exit' \
 				'-d,' '--dos-newlines' \
 					'converts to DOS-style newlines (LF to CR LF)' \
+				'-l,' '--line-numbers' \
+					'adds line numbers to left side' \
 				'-q,' '--quotes' \
 					'remove matching pair of surrounding quotes' \
 				'-u,' '--unix-newlines' \
@@ -109,6 +112,20 @@ while test "${#}" -gt '0'; do
 		| '--quote' \
 		| '--quotes' )
 			filters="${filters:+${filters} }quotes"
+			;;
+		( '--l' \
+		| '--li' \
+		| '--lin' \
+		| '--line' \
+		| '--line-' \
+		| '--line-n' \
+		| '--line-nu' \
+		| '--line-num' \
+		| '--line-numb' \
+		| '--line-numbe' \
+		| '--line-number' \
+		| '--line-numbers' )
+			filters="${filters:+${filters} }line-numbers"
 			;;
 		( '--u' \
 		| '--un' \
@@ -162,6 +179,21 @@ for FILTER in ${FILTERS}; do
 				| sed '
 					/[^\r]$/s/$/\r/g;
 				'
+			)"
+			;;
+
+		('line-numbers')
+			output="$(
+				PADDING="$(
+					printf '%s' "${output}" \
+					| wc -l \
+					| fold -w '1' \
+					| wc -l
+				)"
+				printf '%s' "${output}" \
+				| awk '{
+					printf("%0'"${PADDING}"'i: %s\n", NR, $0);
+				}'
 			)"
 			;;
 
