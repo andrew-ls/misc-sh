@@ -6,12 +6,12 @@
 TEMP="${TMPDIR:-/tmp}/cloc-git-$(date '+%Y%m%d%H%M%S')"
 
 if test -x "$(command -pv cloc)"; then
-	mkdir "${TEMP}"
+	trap "rm -rf '${TEMP:?}'" EXIT \
+	&& mkdir "${TEMP}"
 	if test "${?}" = '0'; then
 		git clone --depth '1' "${1:?}" "${TEMP}" \
 		&& echo \
 		&& command -p cloc "${TEMP}"
-		rm -rf "${TEMP:?}"
 	fi
 else
 	printf 'cloc-git: %s\n' '`cloc` not found in PATH.'
