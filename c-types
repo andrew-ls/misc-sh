@@ -1,0 +1,54 @@
+#!/bin/sh
+
+# Copyright (c) 2019 Andrew Steel <copyright@andrewsteel.net>
+#
+# SPDX-License-Identifier: MIT-0
+#
+# The MIT No Attribution License:
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of the Software,
+# and to permit persons to whom the Software is furnished to do so.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+# c-types:
+# Prints the size (in bits) of basic C data types for this system.
+# Based on an example in "The Practice of Programming (1999)", section 8.1.
+
+TEMP="${TMPDIR:-/tmp}/c-types-$(date '+%Y%m%d%H%M%S').o"
+
+command -p c99 \
+	-o "${TEMP:?}" \
+	-x 'c' \
+	- <<- 'EOF'
+
+	#include <limits.h>
+	#include <stdio.h>
+
+	int main (void)
+	{
+		printf("void *\t%i\n", sizeof(void *) * CHAR_BIT);
+		printf("char\t%i\n", sizeof(char) * CHAR_BIT);
+		printf("short\t%i\n", sizeof(short) * CHAR_BIT);
+		printf("int\t%i\n", sizeof(int) * CHAR_BIT);
+		printf("long\t%i\n", sizeof(long) * CHAR_BIT);
+		printf("float\t%i\n", sizeof(float) * CHAR_BIT);
+		printf("double\t%i\n", sizeof(double) * CHAR_BIT);
+	}
+
+	EOF
+
+if test "${?}" = '0'; then
+	trap "rm '${TEMP}'" EXIT
+	"${TEMP}"
+fi
