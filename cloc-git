@@ -1,0 +1,19 @@
+#!/bin/sh
+# Requires `cloc`.
+# Prints a `cloc` report on a Git repository.
+# Based on example at <https://stackoverflow.com/a/29012789>
+
+TEMP="${TMPDIR:-/tmp}/cloc-git-$(date '+%Y%m%d%H%M%S')"
+
+if test -x "$(command -pv cloc)"; then
+	mkdir "${TEMP}"
+	if test "${?}" = '0'; then
+		git clone --depth '1' "${1:?}" "${TEMP}" \
+		&& echo \
+		&& command -p cloc "${TEMP}"
+		rm -rf "${TEMP:?}"
+	fi
+else
+	printf 'cloc-git: %s\n' '`cloc` not found in PATH.'
+fi
+
