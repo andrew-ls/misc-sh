@@ -62,12 +62,20 @@ while test "${#}" -gt '0'; do
 done
 GLOBAL="${switch_global:-}"
 
+ERRORS="$(
+	npm ls --parseable --depth '0' --global 2>&1 > /dev/null \
+	| sed -n 's/^npm ERR!/npm-list:/p'
+)"
+test "${ERRORS}" \
+&& printf '%s\n' "${ERRORS}" \
+>&2
+
 PACKAGES="$(
 	(
 		if test "${GLOBAL}"; then
-			npm ls --parseable --long --depth '0' --global
+			npm ls --parseable --long --depth '0' --global 2> /dev/null
 		else
-			npm ls --parseable --long --depth '0'
+			npm ls --parseable --long --depth '0' 2> /dev/null
 		fi
 	) \
 	| tail -n '+2' \
