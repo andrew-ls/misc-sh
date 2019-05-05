@@ -24,6 +24,5 @@
 # git-resolve-ref:
 # Prints the ID of the primary reference for a refname.
 
-git show-ref -- "${@}" \
-| head -n 1 \
-| awk '{ print $1 }'
+git show-ref --hash -- "${@}" \
+| head -n 1
