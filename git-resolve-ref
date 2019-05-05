@@ -22,7 +22,8 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 # git-resolve-ref:
-# Prints the ID of the primary reference for a refname.
+# Prints the IDs of one or more refnames (if valid).
 
-git show-ref --hash -- "${@}" \
-| head -n 1
+for REFNAME in "${@}"; do
+	git rev-parse -q --verify "${REFNAME}" --
+done
