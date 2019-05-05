@@ -24,6 +24,8 @@
 # git-resolve-ref:
 # Prints the IDs of one or more refnames (if valid).
 
+test "${*}" || set -- HEAD
+
 for REFNAME in "${@}"; do
 	git rev-parse -q --verify "${REFNAME}" --
 done
