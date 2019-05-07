@@ -1,0 +1,145 @@
+#!/bin/sh
+
+# Copyright (c) YEAR(S) Andrew Steel <copyright@andrewsteel.net>
+#
+# SPDX-License-Identifier: MIT
+#
+# The MIT License:
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of the Software,
+# and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+# google-authenticator-parse-db:
+# Prints the data in a Google Authenticator database.
+# The database can be retrieved from a rooted Android system at the path
+# '/data/data/com.google.android.apps.authenticator2/databases/databases'
+
+parse_args() {
+	unset -v \
+		arg_file \
+		switch_color
+	while test "${#}" -gt 0; do
+		KEY="$(printf '%s' "${1}" | cut -d '=' -f 1)"
+		VALUE="$(printf '%s' "${1}" | cut -s -d '=' -f 2-)"
+		case "${KEY}" in
+			( '--c' \
+			| '--co' \
+			| '--col' \
+			| '--colo' \
+			| '--color' )
+				if test "${VALUE}"; then
+					switch_color="${VALUE}"
+				else
+					switch_color="${2}"
+					shift
+				fi
+				;;
+			(*)
+				arg_file="${1}"
+				;;
+		esac
+		shift
+	done
+	FILE="${arg_file}"
+	set_colors "${switch_color}"
+}
+
+set_colors() {
+	if \
+		test "${1}" != 'always' \
+		&& test "${1}" != 'auto' \
+		&& test "${1}" != 'never'
+	then
+		STATUS='auto'
+	else
+		STATUS="${1}"
+	fi
+	if \
+		test "${STATUS}" == 'always' \
+		|| { test "${STATUS}" == 'auto' && test -t 1; }
+	then
+		COLOR='always'
+		COLOR_BOLD="$(printf '\033[1m')"
+		COLOR_RESET="$(printf '\033[0m')"
+	else
+		COLOR='never'
+		unset -v \
+			COLOR_BOLD \
+			COLOR_RESET
+	fi
+}
+
+parse_args "${@}"
+if ! test "${FILE}"; then
+	printf '%s: %s\n' \
+		"$(basename ${0})" \
+		'no FILE defined' \
+		>&2
+	exit 1
+fi
+
+if test "$(command -v sqlite3)"; then
+	sqlite3 "${FILE}" 'SELECT issuer, email, secret FROM accounts;' \
+	| {
+		if test "${COLOR}" != 'never'; then
+
+			# Print visual layout.
+			sed '1iISSUER|EMAIL|SECRET' \
+			| tr '|' '\t' \
+			| awk '
+
+				BEGIN { SEPARATOR = "  " }
+
+				{
+					input[i++] = $0;
+					if (length($1) > col1_length) col1_length = length($1);
+					if (length($2) > col2_length) col2_length = length($2);
+					if (length($3) > col3_length) col3_length = length($3);
+				}
+
+				END {
+					for (i in input) {
+						$0 = input[i];
+						printf("%-" col1_length "s" SEPARATOR, $1);
+						printf("%-" col2_length "s" SEPARATOR, $2);
+						printf("%-" col3_length "s\n", $3);
+					}
+				}
+
+			' \
+			| sed '
+				1s/[^[:space:]]*/'"${COLOR_BOLD}"'&'"${COLOR_RESET}"'/g
+			'
+
+		else
+
+			# Print logical layout:
+			# Fields are separated by tabs (for easy parsing by `cut`).
+			tr '|' '\t'
+
+		fi
+	}
+	exit 0
+else
+	printf '%s: %s\n' \
+		"$(basename ${0})" \
+		'`sqlite3` not in PATH' \
+		>&2
+	exit 2
+fi
