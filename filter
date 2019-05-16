@@ -39,6 +39,7 @@ while test "${#}" -gt '0'; do
 		switches=''
 		for OPTION in $(printf '%s' "${1#?}" | fold -w '1'); do
 			case "${OPTION}" in
+				('a') switches="${switches:+${switches} }--ascii-printable" ;;
 				('d') switches="${switches:+${switches} }--dos-newlines" ;;
 				('l') switches="${switches:+${switches} }--line-numbers" ;;
 				('q') switches="${switches:+${switches} }--quotes" ;;
@@ -59,6 +60,23 @@ while test "${#}" -gt '0'; do
 		set -- ${switches} "${@}"
 	fi
 	case "${1}" in
+		( '--a' \
+		| '--as' \
+		| '--asc' \
+		| '--asci' \
+		| '--ascii' \
+		| '--ascii-' \
+		| '--ascii-p' \
+		| '--ascii-pr' \
+		| '--ascii-pri' \
+		| '--ascii-prin' \
+		| '--ascii-print' \
+		| '--ascii-printa' \
+		| '--ascii-printab' \
+		| '--ascii-printabl' \
+		| '--ascii-printable' )
+			filters="${filters:+${filters} }ascii-printable"
+			;;
 		( '--d' \
 		| '--do' \
 		| '--dos' \
@@ -90,9 +108,11 @@ while test "${#}" -gt '0'; do
 				'options, and may be repeated by specifying the same option multiple times.'
 			echo
 			printf '%s:\n' 'Options'
-			printf '%5s %-17s %s\n' \
+			printf '%5s %-19s %s\n' \
 				'' '--help' \
 					'print this and exit' \
+				'-a,' '--ascii-printable' \
+					'removes non-ASCII and non-printable characters' \
 				'-d,' '--dos-newlines' \
 					'converts to DOS-style newlines (LF to CR LF)' \
 				'-l,' '--line-numbers' \
@@ -172,6 +192,15 @@ INPUT="$(cat)"
 output="${INPUT}"
 for FILTER in ${FILTERS}; do
 	case "${FILTER}" in
+
+		('ascii-printable')
+			output="$(
+				printf '%s' "${output}" \
+				| sed '
+					s/[^]	 !"#$%&'\''()*+,./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~-]//g;
+				'
+			)"
+			;;
 
 		('dos-newlines')
 			output="$(
