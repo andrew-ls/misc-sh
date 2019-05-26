@@ -28,9 +28,9 @@
 # Print using command expansion (strips trailing newlines).
 printf '%s' "$(
 	if test "$(command -pv xsel)"; then
-		xsel -ob -l /dev/null
+		command -p xsel -ob -l /dev/null
 	elif test "$(command -pv xclip)"; then
-		xclip -o -selection clipboard -f
+		command -p xclip -o -selection clipboard -f
 	else
 		printf '%s: %s\n' \
 			"$(basename "${0}")" \
