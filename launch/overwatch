@@ -1,0 +1,85 @@
+#!/bin/sh
+
+# Copyright (c) 2019 Andrew Steel <copyright@andrewsteel.net>
+#
+# SPDX-License-Identifier: MIT
+#
+# The MIT License:
+#
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without restriction,
+# including without limitation the rights to use, copy, modify, merge,
+# publish, distribute, sublicense, and/or sell copies of the Software,
+# and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+# overwatch:
+# Rewriting Lutris as a shell script because why not?
+# Requires accompanying .env file to source constants below.
+
+# Sources constants and sets defaults if undefined.
+cd "$(dirname "$(realpath "${0}")")" \
+|| exit 1
+. "./$(basename "${0}").env" 2> /dev/null
+DLLOVERRIDES_HOME="${DLLOVERRIDES_HOME:-/dev/null}"
+SCRIPT_POST="${SCRIPT_POST:-:}"
+SCRIPT_PRE="${SCRIPT_PRE:-:}"
+export WINELOADER="${WINELOADER:-wine}"
+export WINEPREFIX="${WINEPREFIX:-${HOME}/.wine}"
+
+# Copies DLL overrides (if any) to System32 and tells Wine to use them.
+export WINEDLLOVERRIDES="$(
+	SYSTEM32="${WINEPREFIX}/drive_c/windows/system32"
+	unset -v \
+		dlls
+	IFS="$(printf '\n!')"; IFS="${IFS#!}"
+	for DLL in $(ls "${DLLOVERRIDES_HOME}" | grep '.dll$'); do
+		dlls="${dlls:+${dlls},}${DLL%.dll}"
+		test -f "${SYSTEM32}/${DLL}.orig" \
+		|| mv "${SYSTEM32}/${DLL}" "${SYSTEM32}/${DLL}.orig"
+		cp -f "${DLLOVERRIDES_HOME}/${DLL}" "${SYSTEM32}/${DLL}"
+	done
+	test "${dlls}" \
+	&& printf '%s=%s\n' \
+		"${dlls}" \
+		'n,b'
+)"
+
+# Graphics API settings.
+export DXVK_HUD='compiler'
+export DXVK_STATE_CACHE_PATH="${WINEPREFIX}"
+export __GL_SHADER_DISK_CACHE='1'
+export __GL_SHADER_DISK_CACHE_PATH="${WINEPREFIX}"
+
+# Pre-run script.
+"${SCRIPT_PRE}"
+
+# Wait until both Battle.net then Overwatch terminates.
+"${WINELOADER}" \
+	"${WINEPREFIX}/drive_c/Program Files (x86)/Battle.net/Battle.net.exe" \
+		--exec="launch Pro"
+sleep 2
+WAIT_PID="$(
+	ps -Ao pid,comm \
+	| grep 'Overwatch.exe' \
+	| tail -n 1 \
+	| awk '{print $1}'
+)"
+while kill -0 "${WAIT_PID}" 2> /dev/null; do
+	sleep 1;
+done
+
+# Post-run script.
+"${SCRIPT_POST}"
