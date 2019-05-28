@@ -30,4 +30,5 @@ cd "$(dirname "$(realpath "${0}")")" \
 . "./$(basename "${0%.*}").env" 2> /dev/null
 XMODMAPRC="${XMODMAPRC:-${TMPDIR:-/tmp}/$(basename "${0%.*}").xmod}"
 
-xmodmap "${XMODMAPRC}"
+xmodmap "${XMODMAPRC}" \
+&& mv -f "${XMODMAPRC}" "${XMODMAPRC}~"
