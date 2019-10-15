@@ -21,8 +21,8 @@
 # TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-# ifs-standard:
-# When sourced sets IFS to standard setting of <space><tab><newline>.
+# ifs-lf:
+# When sourced sets IFS to <newline/line feed>.
 
 # Simple check if sourced.
 IFS=' '
@@ -32,5 +32,5 @@ test "${0#*/}" != "${0}" \
 	'must be sourced' \
 	>&2
 
-IFS="$(printf ' \t\n!')"
+IFS="$(printf '\n!')"
 IFS="${IFS%!}"
