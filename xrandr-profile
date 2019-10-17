@@ -305,33 +305,31 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 	case "${ACTION}" in
 
 		('dpi-96')
+			gsettings set \
+				org.gnome.settings-daemon.plugins.xsettings overrides \
+				"[{'Gdk/WindowScalingFactor', <1>}]"
+
 			case "${DISPLAY_NAME_FRIENDLY}" in
 				('GPD Win 2')
 					xrandr --output "${DISPLAY_ID}" \
 						--mode 1280x720 \
 						--scale 1x1
-					gsettings set \
-						org.gnome.settings-daemon.plugins.xsettings overrides \
-						"[{'Gdk/WindowScalingFactor', <1>}]"
-					echo 'dpi-96' > "${STATE_DIR}/state"
+					test "${?}" == '0' \
+					&& echo 'dpi-96' > "${STATE_DIR}/state"
 					;;
 				('HP Spectre x360 13-ae003na')
 					xrandr --output "${DISPLAY_ID}" \
 						--mode 1920x1080 \
 						--scale 1x1
-					gsettings set \
-						org.gnome.settings-daemon.plugins.xsettings overrides \
-						"[{'Gdk/WindowScalingFactor', <1>}]"
-					echo 'dpi-96' > "${STATE_DIR}/state"
+					test "${?}" == '0' \
+					&& echo 'dpi-96' > "${STATE_DIR}/state"
 					;;
 				('LG 27UD68P 4K Monitor')
 					xrandr --output "${DISPLAY_ID}" \
 						--mode 2560x1440 \
 						--scale 1x1
-					gsettings set \
-						org.gnome.settings-daemon.plugins.xsettings overrides \
-						"[{'Gdk/WindowScalingFactor', <1>}]"
-					echo 'dpi-96' > "${STATE_DIR}/state"
+					test "${?}" == '0' \
+					&& echo 'dpi-96' > "${STATE_DIR}/state"
 					;;
 			esac
 			;;
@@ -415,13 +413,15 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					--mode "${DISPLAY_RESOLUTION}" \
 					--scale 1x1
 			fi
-			echo 'reset-all' > "${STATE_DIR}/state"
+			test "${?}" == '0' \
+			&& echo 'reset-all' > "${STATE_DIR}/state"
 			;;
 
 		('reset-resolution')
 			xrandr --output "${DISPLAY_ID}" \
 				--mode "${DISPLAY_RESOLUTION}"
-			echo 'reset-resolution' > "${STATE_DIR}/state"
+			test "${?}" == '0' \
+			&& echo 'reset-resolution' > "${STATE_DIR}/state"
 			;;
 
 		('reset-scale')
@@ -441,19 +441,22 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 				xrandr --output "${DISPLAY_ID}" \
 					--scale 1x1
 			fi
-			echo 'reset-scale' > "${STATE_DIR}/state"
+			test "${?}" == '0' \
+			&& echo 'reset-scale' > "${STATE_DIR}/state"
 			;;
 
 		('resolution')
 			xrandr --output "${DISPLAY_ID}" \
 				--mode "${RESOLUTION}"
-			echo 'resolution' > "${STATE_DIR}/state"
+			test "${?}" == '0' \
+			&& echo 'resolution' > "${STATE_DIR}/state"
 			;;
 
 		('scale')
 			xrandr --output "${DISPLAY_ID}" \
 				--scale "${SCALE}"
-			echo 'scale' > "${STATE_DIR}/state"
+			test "${?}" == '0' \
+			&& echo 'scale' > "${STATE_DIR}/state"
 			;;
 
 	esac
