@@ -25,6 +25,69 @@ export LC_ALL='C'
 
 TEMP_DIR="/tmp/xrandr-profile-$(date +%Y%m%d%H%M%S)"
 
+get_primary_display_id_dev() {(
+	IFS="$(printf '\n!')"; IFS="${IFS%!}"
+
+	printf '%s\n' "$(
+		for DIR in $(
+			find '/sys/devices' -type d \
+			| sort
+		); do
+			if \
+				test -f "${DIR}/edid" \
+				&& test "$(cat "${DIR}/enabled")" = 'enabled'
+			then
+				basename "$(printf '%s\n' "${DIR}")"
+			fi
+		done
+	)" \
+	| head -n 1
+)}
+
+get_primary_display_id_xrandr() {(
+	xrandr -q \
+	| sed -n '
+		s/^\([^[:space:]]\{1,\}\)[[:space:]]\{1,\}connected[[:space:]]\{1,\}primary[[:space:]]\{1,\}.*/\1/p;
+	' \
+	| sort \
+	| head -n 1
+)}
+
+get_display_manufacturer_model() {(
+	DISPLAY_ID_DEV="${1:?}"
+	< "$(
+		find '/sys/devices' -type d \
+		| grep "${DISPLAY_ID_DEV}\$" \
+		| sort \
+		| head -n 1
+	)/edid" \
+	edid-decode \
+	| grep '^Manufacturer:' \
+	| cut -d ':' -f 2- \
+	| sed 's/\(.*\)Serial Number.*/\1/' \
+	| sed '
+		s/^[[:space:]]*//;
+		s/[[:space:]]$//;
+	'
+)}
+
+get_display_name() {(
+	DISPLAY_ID_DEV="${1:?}"
+	< "$(
+		find '/sys/devices' -type d \
+		| grep "${DISPLAY_ID_DEV}\$" \
+		| sort \
+		| head -n 1
+	)/edid" \
+	edid-decode \
+	| grep '^Monitor name:' \
+	| cut -d ':' -f 2- \
+	| sed '
+		s/^[[:space:]]*//;
+		s/[[:space:]]$//;
+	'
+)}
+
 unset -v \
 	ACTION
 unset -v \
@@ -94,69 +157,6 @@ elif test "${toggle_dpi}"; then
 elif test "${toggle_scale}"; then
 	ACTION='toggle-scale'
 fi
-
-get_primary_display_id_dev() {(
-	IFS="$(printf '\n!')"; IFS="${IFS%!}"
-
-	printf '%s\n' "$(
-		for DIR in $(
-			find '/sys/devices' -type d \
-			| sort
-		); do
-			if \
-				test -f "${DIR}/edid" \
-				&& test "$(cat "${DIR}/enabled")" = 'enabled'
-			then
-				basename "$(printf '%s\n' "${DIR}")"
-			fi
-		done
-	)" \
-	| head -n 1
-)}
-
-get_primary_display_id_xrandr() {(
-	xrandr -q \
-	| sed -n '
-		s/^\([^[:space:]]\{1,\}\)[[:space:]]\{1,\}connected[[:space:]]\{1,\}primary[[:space:]]\{1,\}.*/\1/p;
-	' \
-	| sort \
-	| head -n 1
-)}
-
-get_display_manufacturer_model() {(
-	DISPLAY_ID_DEV="${1:?}"
-	< "$(
-		find '/sys/devices' -type d \
-		| grep "${DISPLAY_ID_DEV}\$" \
-		| sort \
-		| head -n 1
-	)/edid" \
-	edid-decode \
-	| grep '^Manufacturer:' \
-	| cut -d ':' -f 2- \
-	| sed 's/\(.*\)Serial Number.*/\1/' \
-	| sed '
-		s/^[[:space:]]*//;
-		s/[[:space:]]$//;
-	'
-)}
-
-get_display_name() {(
-	DISPLAY_ID_DEV="${1:?}"
-	< "$(
-		find '/sys/devices' -type d \
-		| grep "${DISPLAY_ID_DEV}\$" \
-		| sort \
-		| head -n 1
-	)/edid" \
-	edid-decode \
-	| grep '^Monitor name:' \
-	| cut -d ':' -f 2- \
-	| sed '
-		s/^[[:space:]]*//;
-		s/[[:space:]]$//;
-	'
-)}
 
 mkdir -p "${TEMP_DIR}"
 if test "${XDG_SESSION_TYPE}" = 'x11'; then
