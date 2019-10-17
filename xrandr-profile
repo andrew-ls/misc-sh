@@ -361,11 +361,12 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					--width=0 \
 					--height=240 \
 					--title='Resolution:Scale' \
-					--text='Default: native' \
+					--text='Default: Native' \
 					--hide-header \
 					--hide-column=1 \
 					--column='code' \
 					--column='display' \
+					'' 'Native' \
 					${LIST}
 			)"
 			if test "${?}" == '0'; then
