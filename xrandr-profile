@@ -23,7 +23,7 @@
 IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
 export LC_ALL='C'
 
-TEMP_DIR="/tmp/xrandr-profile-$(date +%Y%m%d%H%M%S)"
+TEMP_DIR='/tmp/xrandr-profile'
 
 get_primary_display_id_dev() {(
 	IFS="$(printf '\n!')"; IFS="${IFS%!}"
@@ -89,9 +89,14 @@ get_display_name() {(
 )}
 
 unset -v \
-	ACTION
+	ACTION \
+	RESOLUTION \
+	SCALE
 unset -v \
+	reset_all \
+	reset_resolution \
 	reset_scale \
+	resolution \
 	scale \
 	toggle_dpi \
 	toggle_scale
@@ -100,16 +105,57 @@ while test "${#}" -gt 0; do
 		( '-r' \
 		| '--r' \
 		| '--re' \
-		| '--res' \
-		| '--rese' \
+		| '--res' )
+			printf '%s: %s: %s\n' \
+				'xrandr-profile' \
+				"option '${1}' is ambiguous; possibilities" \
+				"'--reset-all' '--reset-scale' '--reset-resolution' '--resolution'" \
+				>&2
+			exit 1
+			;;
+		( '--rese' \
 		| '--reset' \
-		| '--reset-' \
-		| '--reset-s' \
+		| '--reset-' )
+			printf '%s: %s: %s\n' \
+				'xrandr-profile' \
+				"option '${1}' is ambiguous; possibilities" \
+				"'--reset-all' '--reset-scale' '--reset-resolution'" \
+				>&2
+			exit 1
+			;;
+		( '--reset-a' \
+		| '--reset-al' \
+		| '--reset-all' )
+			reset_all='TRUE'
+			;;
+		( '--reset-r' \
+		| '--reset-re' \
+		| '--reset-res' \
+		| '--reset-reso' \
+		| '--reset-resol' \
+		| '--reset-resolu' \
+		| '--reset-resolut' \
+		| '--reset-resoluti' \
+		| '--reset-resolutio' \
+		| '--reset-resolution' )
+			reset_resolution='TRUE'
+			;;
+		( '--reset-s' \
 		| '--reset-sc' \
 		| '--reset-sca' \
 		| '--reset-scal' \
 		| '--reset-scale' )
 			reset_scale='TRUE'
+			;;
+		( '--reso' \
+		| '--resol' \
+		| '--resolu' \
+		| '--resolut' \
+		| '--resoluti' \
+		| '--resolutio' \
+		| '--resolution' )
+			resolution="${2}"
+			shift
 			;;
 		( '-s' \
 		| '--s' \
@@ -117,7 +163,8 @@ while test "${#}" -gt 0; do
 		| '--sca' \
 		| '--scal' \
 		| '--scale' )
-			scale='TRUE'
+			scale="${2}"
+			shift
 			;;
 		( '-t' \
 		| '--t' \
@@ -125,6 +172,7 @@ while test "${#}" -gt 0; do
 		| '--tog' \
 		| '--togg' \
 		| '--toggl' \
+		| '--toggle' \
 		| '--toggle-' )
 			printf '%s: %s: %s\n' \
 				'xrandr-profile' \
@@ -148,10 +196,18 @@ while test "${#}" -gt 0; do
 	esac
 	shift
 done
-if test "${reset_scale}"; then
+if test "${reset_all}"; then
+	ACTION='reset-all'
+elif test "${reset_resolution}"; then
+	ACTION='reset-resolution'
+elif test "${reset_scale}"; then
 	ACTION='reset-scale'
+elif test "${resolution}"; then
+	ACTION='resolution'
+	RESOLUTION="${resolution}"
 elif test "${scale}"; then
 	ACTION='scale'
+	SCALE="${SCALE}"
 elif test "${toggle_dpi}"; then
 	ACTION='toggle-dpi'
 elif test "${toggle_scale}"; then
@@ -170,19 +226,23 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 	if test "${ACTION}" = 'toggle-dpi'; then
 		if \
 			test -f "${TEMP_DIR}/state" \
-			&& test "$(cat "${TEMP_DIR}/state")" != 'scale'
+			&& test "$(cat "${TEMP_DIR}/state")" != 'reset-all'
 		then
-			ACTION='scale'
+			ACTION='reset-all'
 		else
 			ACTION='dpi-96'
 		fi
 	fi
 
 	if test "${ACTION}" = 'toggle-scale'; then
-		if test -f "${TEMP_DIR}/state"; then
+		if \
+			test -f "${TEMP_DIR}/state" \
+			&& test "$(cat "${TEMP_DIR}/state")" != 'reset-scale'
+		then
 			ACTION='reset-scale'
 		else
 			ACTION='scale'
+			SCALE='1x1'
 		fi
 	fi
 
@@ -216,6 +276,15 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 
 		('dpi-96')
 			case "${DISPLAY_NAME_FRIENDLY}" in
+				('GPD Win 2')
+					xrandr --output "${DISPLAY_ID}" \
+						--mode 1280x720 \
+						--scale 1x1
+					gsettings set \
+						org.gnome.settings-daemon.plugins.xsettings overrides \
+						"[{'Gdk/WindowScalingFactor', <1>}]"
+					echo 'dpi-96' > "${TEMP_DIR}/state"
+					;;
 				('HP Spectre x360 13-ae003na')
 					xrandr --output "${DISPLAY_ID}" \
 						--mode 1920x1080 \
@@ -237,35 +306,69 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 			esac
 			;;
 
-		('reset-scale')
-			xrandr --output "${DISPLAY_ID}" --scale 1x1
-			rm "${TEMP_DIR}/state"
-			;;
-
-		('scale')
+		('reset-all')
 			case "${DISPLAY_NAME_FRIENDLY}" in
 				('GPD Win 2')
 					xrandr --orientation right
 					;;
-				('HP Spectre x360 13-ae003na')
-					xrandr --output "${DISPLAY_ID}" \
-						--mode 3840x2160 \
-						--scale 1x1
-					gsettings set \
-						org.gnome.settings-daemon.plugins.xsettings overrides \
-						"[{'Gdk/WindowScalingFactor', <2>}]"
-					echo 'scale' > "${TEMP_DIR}/state"
-					;;
-				('LG 27UD68P 4K Monitor')
-					xrandr --output "${DISPLAY_ID}" \
-						--mode 3840x2160 \
-						--scale 1.5x1.5
-					gsettings set \
-						org.gnome.settings-daemon.plugins.xsettings overrides \
-						"[{'Gdk/WindowScalingFactor', <2>}]"
-					echo 'scale' > "${TEMP_DIR}/state"
-					;;
 			esac
+			if test "$(echo "${DISPLAY_SCALE} > 1" | bc)" == '1'; then
+				gsettings set \
+					org.gnome.settings-daemon.plugins.xsettings overrides \
+					"[{'Gdk/WindowScalingFactor', <2>}]"
+			else
+				gsettings set \
+					org.gnome.settings-daemon.plugins.xsettings overrides \
+					"[{'Gdk/WindowScalingFactor', <1>}]"
+			fi
+			if test "${DISPLAY_SCALE%.*}" != "${DISPLAY_SCALE}"; then
+				xrandr --output "${DISPLAY_ID}" \
+					--mode "${DISPLAY_RESOLUTION}" \
+					--scale "${DISPLAY_SCALE}x${DISPLAY_SCALE}"
+			else
+				xrandr --output "${DISPLAY_ID}" \
+					--mode "${DISPLAY_RESOLUTION}" \
+					--scale 1x1
+			fi
+			echo 'reset-all' > "${TEMP_DIR}/state"
+			;;
+
+		('reset-resolution')
+			xrandr --output "${DISPLAY_ID}" \
+				--mode "${DISPLAY_RESOLUTION}"
+			echo 'reset-resolution' > "${TEMP_DIR}/state"
+			;;
+
+		('reset-scale')
+			if test "$(echo "${DISPLAY_SCALE} > 1" | bc)" == '1'; then
+				gsettings set \
+					org.gnome.settings-daemon.plugins.xsettings overrides \
+					"[{'Gdk/WindowScalingFactor', <2>}]"
+			else
+				gsettings set \
+					org.gnome.settings-daemon.plugins.xsettings overrides \
+					"[{'Gdk/WindowScalingFactor', <1>}]"
+			fi
+			if test "${DISPLAY_SCALE%.*}" != "${DISPLAY_SCALE}"; then
+				xrandr --output "${DISPLAY_ID}" \
+					--scale "${DISPLAY_SCALE}x${DISPLAY_SCALE}"
+			else
+				xrandr --output "${DISPLAY_ID}" \
+					--scale 1x1
+			fi
+			echo 'reset-scale' > "${TEMP_DIR}/state"
+			;;
+
+		('resolution')
+			xrandr --output "${DISPLAY_ID}" \
+				--mode "${RESOLUTION}"
+			echo 'resolution' > "${TEMP_DIR}/state"
+			;;
+
+		('scale')
+			xrandr --output "${DISPLAY_ID}" \
+				--scale "${SCALE}"
+			echo 'scale' > "${TEMP_DIR}/state"
 			;;
 
 	esac
