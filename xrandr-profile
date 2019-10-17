@@ -197,6 +197,11 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 		('HP Spectre x360 13-ae003na') echo '16x9' ;;
 		('LG 27UD68P 4K Monitor') echo '16x9' ;;
 	esac)"
+	DISPLAY_RESOLUTION="$(case "${DISPLAY_NAME_FRIENDLY}" in
+		('GPD Win 2') echo '1280x720' ;;
+		('HP Spectre x360 13-ae003na') echo '3840x2160' ;;
+		('LG 27UD68P 4K Monitor') echo '3840x2160' ;;
+	esac)"
 	DISPLAY_SCALE="$(case "${DISPLAY_NAME_FRIENDLY}" in
 		('GPD Win 2') echo '1' ;;
 		('HP Spectre x360 13-ae003na') echo '2' ;;
