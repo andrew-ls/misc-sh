@@ -382,10 +382,19 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					RESOLUTION="${DISPLAY_RESOLUTION}"
 					SCALE="${DISPLAY_SCALE}"
 				fi
-				"${0}" \
-					--resolution "${RESOLUTION}" \
-					--scale "${SCALE}"
-				exit "${?}"
+				OUTPUT="$(
+					"${0}" \
+						--resolution "${RESOLUTION}" \
+						--scale "${SCALE}" \
+						2>&1
+				)"
+				if test "${?}" == '0'; then
+					exit 0
+				else
+					zenity --error \
+						--text="${OUTPUT}"
+					exit 1
+				fi
 			fi
 			;;
 
@@ -413,15 +422,21 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					--mode "${DISPLAY_RESOLUTION}" \
 					--scale 1x1
 			fi
-			test "${?}" == '0' \
-			&& echo 'reset-all' > "${STATE_DIR}/state"
+			if test "${?}" == '0'; then
+				echo 'reset-all' > "${STATE_DIR}/state"
+			else
+				exit 1
+			fi
 			;;
 
 		('reset-resolution')
 			xrandr --output "${DISPLAY_ID}" \
 				--mode "${DISPLAY_RESOLUTION}"
-			test "${?}" == '0' \
-			&& echo 'reset-resolution' > "${STATE_DIR}/state"
+			if test "${?}" == '0'; then
+				echo 'reset-resolution' > "${STATE_DIR}/state"
+			else
+				exit 1
+			fi
 			;;
 
 		('reset-scale')
@@ -441,22 +456,31 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 				xrandr --output "${DISPLAY_ID}" \
 					--scale 1x1
 			fi
-			test "${?}" == '0' \
-			&& echo 'reset-scale' > "${STATE_DIR}/state"
+			if test "${?}" == '0'; then
+				echo 'reset-scale' > "${STATE_DIR}/state"
+			else
+				exit 1
+			fi
 			;;
 
 		('resolution')
 			xrandr --output "${DISPLAY_ID}" \
 				--mode "${RESOLUTION}"
-			test "${?}" == '0' \
-			&& echo 'resolution' > "${STATE_DIR}/state"
+			if test "${?}" == '0'; then
+				echo 'resolution' > "${STATE_DIR}/state"
+			else
+				exit 1
+			fi
 			;;
 
 		('scale')
 			xrandr --output "${DISPLAY_ID}" \
 				--scale "${SCALE}"
-			test "${?}" == '0' \
-			&& echo 'scale' > "${STATE_DIR}/state"
+			if test "${?}" == '0'; then
+				echo 'scale' > "${STATE_DIR}/state"
+			else
+				exit 1
+			fi
 			;;
 
 	esac
