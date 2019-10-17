@@ -23,7 +23,8 @@
 IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
 export LC_ALL='C'
 
-TEMP_DIR='/tmp/xrandr-profile'
+STATE_DIR="/tmp/xrandr-profile-state"
+TMP_DIR="/tmp/xrandr-profile-$(date +%Y%m%d%H%M%S)"
 
 get_primary_display_id_dev() {(
 	IFS="$(printf '\n!')"; IFS="${IFS%!}"
@@ -214,7 +215,8 @@ elif test "${toggle_scale}"; then
 	ACTION='toggle-scale'
 fi
 
-mkdir -p "${TEMP_DIR}"
+mkdir -p "${STATE_DIR}"
+mkdir -p "${TMP_DIR}"
 if test "${XDG_SESSION_TYPE}" = 'x11'; then
 
 	DISPLAY_ID="$(get_primary_display_id_xrandr)"
@@ -225,8 +227,8 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 
 	if test "${ACTION}" = 'toggle-dpi'; then
 		if \
-			test -f "${TEMP_DIR}/state" \
-			&& test "$(cat "${TEMP_DIR}/state")" != 'reset-all'
+			test -f "${STATE_DIR}/state" \
+			&& test "$(cat "${STATE_DIR}/state")" != 'reset-all'
 		then
 			ACTION='reset-all'
 		else
@@ -236,8 +238,8 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 
 	if test "${ACTION}" = 'toggle-scale'; then
 		if \
-			test -f "${TEMP_DIR}/state" \
-			&& test "$(cat "${TEMP_DIR}/state")" != 'reset-scale'
+			test -f "${STATE_DIR}/state" \
+			&& test "$(cat "${STATE_DIR}/state")" != 'reset-scale'
 		then
 			ACTION='reset-scale'
 		else
@@ -283,7 +285,7 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
 						"[{'Gdk/WindowScalingFactor', <1>}]"
-					echo 'dpi-96' > "${TEMP_DIR}/state"
+					echo 'dpi-96' > "${STATE_DIR}/state"
 					;;
 				('HP Spectre x360 13-ae003na')
 					xrandr --output "${DISPLAY_ID}" \
@@ -292,7 +294,7 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
 						"[{'Gdk/WindowScalingFactor', <1>}]"
-					echo 'dpi-96' > "${TEMP_DIR}/state"
+					echo 'dpi-96' > "${STATE_DIR}/state"
 					;;
 				('LG 27UD68P 4K Monitor')
 					xrandr --output "${DISPLAY_ID}" \
@@ -301,7 +303,7 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
 						"[{'Gdk/WindowScalingFactor', <1>}]"
-					echo 'dpi-96' > "${TEMP_DIR}/state"
+					echo 'dpi-96' > "${STATE_DIR}/state"
 					;;
 			esac
 			;;
@@ -330,13 +332,13 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					--mode "${DISPLAY_RESOLUTION}" \
 					--scale 1x1
 			fi
-			echo 'reset-all' > "${TEMP_DIR}/state"
+			echo 'reset-all' > "${STATE_DIR}/state"
 			;;
 
 		('reset-resolution')
 			xrandr --output "${DISPLAY_ID}" \
 				--mode "${DISPLAY_RESOLUTION}"
-			echo 'reset-resolution' > "${TEMP_DIR}/state"
+			echo 'reset-resolution' > "${STATE_DIR}/state"
 			;;
 
 		('reset-scale')
@@ -356,21 +358,22 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 				xrandr --output "${DISPLAY_ID}" \
 					--scale 1x1
 			fi
-			echo 'reset-scale' > "${TEMP_DIR}/state"
+			echo 'reset-scale' > "${STATE_DIR}/state"
 			;;
 
 		('resolution')
 			xrandr --output "${DISPLAY_ID}" \
 				--mode "${RESOLUTION}"
-			echo 'resolution' > "${TEMP_DIR}/state"
+			echo 'resolution' > "${STATE_DIR}/state"
 			;;
 
 		('scale')
 			xrandr --output "${DISPLAY_ID}" \
 				--scale "${SCALE}"
-			echo 'scale' > "${TEMP_DIR}/state"
+			echo 'scale' > "${STATE_DIR}/state"
 			;;
 
 	esac
 
 fi
+rmdir "${TMP_DIR}" 2> /dev/null
