@@ -26,6 +26,18 @@ export LC_ALL='C'
 STATE_DIR="/tmp/xrandr-profile-state"
 TMP_DIR="/tmp/xrandr-profile-$(date +%Y%m%d%H%M%S)"
 
+RESSCALE_DEFINITIONS="$(
+	printf '%s,%s:' \
+		'640x480' '1' \
+		'800x600' '1' \
+		'1024x768' '1' \
+		'1280x720' '1' \
+		'1366x768' '1' \
+		'1920x1080' '1' \
+		'2560x1440' '1' \
+		'3840x2160' '2'
+)"
+
 get_primary_display_id_dev() {(
 	IFS="$(printf '\n!')"; IFS="${IFS%!}"
 
@@ -94,6 +106,7 @@ unset -v \
 	RESOLUTION \
 	SCALE
 unset -v \
+	gui_picker \
 	reset_all \
 	reset_resolution \
 	reset_scale \
@@ -103,6 +116,19 @@ unset -v \
 	toggle_scale
 while test "${#}" -gt 0; do
 	case "${1}" in
+		( '-g' \
+		| '--g' \
+		| '--gu' \
+		| '--gui' \
+		| '--gui-' \
+		| '--gui-p' \
+		| '--gui-pi' \
+		| '--gui-pic' \
+		| '--gui-pick' \
+		| '--gui-picke' \
+		| '--gui-picker' )
+			gui_picker='TRUE'
+			;;
 		( '-r' \
 		| '--r' \
 		| '--re' \
@@ -197,7 +223,9 @@ while test "${#}" -gt 0; do
 	esac
 	shift
 done
-if test "${reset_all}"; then
+if test "${gui_picker}"; then
+	ACTION='gui-picker'
+elif test "${reset_all}"; then
 	ACTION='reset-all'
 elif test "${reset_resolution}"; then
 	ACTION='reset-resolution'
@@ -306,6 +334,61 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					echo 'dpi-96' > "${STATE_DIR}/state"
 					;;
 			esac
+			;;
+
+		('gui-picker')
+			if ! test "$(command -v zenity)"; then
+				printf '%s: %s\n' \
+					'xrandr-profile' \
+					'`zenity` not in PATH' \
+					>&2
+				exit 1
+			fi
+			GUI_LIST_IFS='|'
+			GUI_LIST_IFS_INTERNAL=','
+			MODE="$(
+				LIST="$(
+					IFS=':'
+					for RESSCALE in ${RESSCALE_DEFINITIONS}; do
+						IFS=','
+						RESOLUTION="$(printf %s "${RESSCALE}" | cut -d ',' -f 1)"
+						SCALE="$(printf %s "${RESSCALE}" | cut -d ',' -f 2)"
+						printf "%s${GUI_LIST_IFS}" \
+							"${RESOLUTION}${GUI_LIST_IFS_INTERNAL}${SCALE}" \
+							"${RESOLUTION}:${SCALE}"
+					done
+				)"
+				IFS="${GUI_LIST_IFS}"
+				zenity --list \
+					--width=0 \
+					--height=240 \
+					--title='Resolution:Scale' \
+					--text='Default: native' \
+					--hide-header \
+					--hide-column=1 \
+					--column='code' \
+					--column='display' \
+					${LIST}
+			)"
+			if test "${?}" == '0'; then
+				if test "${MODE}"; then
+					RESOLUTION="$(
+						printf %s "${MODE}" \
+						| cut -d "${GUI_LIST_IFS_INTERNAL}" -f 1
+					)"
+					SCALE="$(
+						printf %s "${MODE}" \
+						| cut -d "${GUI_LIST_IFS_INTERNAL}" -f 2
+					)"
+				else
+					RESOLUTION="${DISPLAY_RESOLUTION}"
+					SCALE="${DISPLAY_SCALE}"
+				fi
+				"${0}" \
+					--resolution "${RESOLUTION}" \
+					--scale "${SCALE}"
+				exit "${?}"
+			fi
 			;;
 
 		('reset-all')
