@@ -101,6 +101,13 @@ get_display_name() {(
 	'
 )}
 
+scale_ui() {(
+	SCALE="${1}"
+	gsettings set \
+		org.gnome.settings-daemon.plugins.xsettings overrides \
+		"[{'Gdk/WindowScalingFactor', <${SCALE}>}]"
+)}
+
 unset -v \
 	ACTION \
 	RESOLUTION \
@@ -311,10 +318,7 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 	case "${ACTION}" in
 
 		('dpi-96')
-			gsettings set \
-				org.gnome.settings-daemon.plugins.xsettings overrides \
-				"[{'Gdk/WindowScalingFactor', <1>}]"
-
+			scale_ui 1
 			case "${DISPLAY_NAME_FRIENDLY}" in
 				('GPD Win 2')
 					xrandr --output "${DISPLAY_ID}" \
@@ -411,24 +415,9 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 					xrandr --orientation right
 					;;
 			esac
-			if test "$(echo "${DISPLAY_SCALE} > 1" | bc)" == '1'; then
-				gsettings set \
-					org.gnome.settings-daemon.plugins.xsettings overrides \
-					"[{'Gdk/WindowScalingFactor', <2>}]"
-			else
-				gsettings set \
-					org.gnome.settings-daemon.plugins.xsettings overrides \
-					"[{'Gdk/WindowScalingFactor', <1>}]"
-			fi
-			if test "${DISPLAY_SCALE%.*}" != "${DISPLAY_SCALE}"; then
-				xrandr --output "${DISPLAY_ID}" \
-					--mode "${DISPLAY_RESOLUTION}" \
-					--scale "${DISPLAY_SCALE}x${DISPLAY_SCALE}"
-			else
-				xrandr --output "${DISPLAY_ID}" \
-					--mode "${DISPLAY_RESOLUTION}" \
-					--scale 1x1
-			fi
+			"${0}" \
+				--resolution "${DISPLAY_RESOLUTION}" \
+				--scale "${DISPLAY_SCALE}"
 			if test "${?}" == '0'; then
 				echo 'reset-all' > "${STATE_DIR}/state"
 			else
@@ -448,13 +437,9 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 
 		('reset-scale')
 			if test "$(echo "${DISPLAY_SCALE} > 1" | bc)" == '1'; then
-				gsettings set \
-					org.gnome.settings-daemon.plugins.xsettings overrides \
-					"[{'Gdk/WindowScalingFactor', <2>}]"
+				scale_ui 2
 			else
-				gsettings set \
-					org.gnome.settings-daemon.plugins.xsettings overrides \
-					"[{'Gdk/WindowScalingFactor', <1>}]"
+				scale_ui 1
 			fi
 			if test "${DISPLAY_SCALE%.*}" != "${DISPLAY_SCALE}"; then
 				xrandr --output "${DISPLAY_ID}" \
@@ -481,9 +466,19 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 			;;
 
 		('resolution-scale')
+			if test "${SCALE#*.}" != "${SCALE}"; then
+				INTEGER="${SCALE%.*}"
+				FRACTION="${SCALE#*.}"
+				scale_ui "$((INTEGER+1))"
+				SCALE_FRACTION="$(echo "(1-0.${FRACTION})+1" | bc)"
+				SCALE_PARAM="${SCALE_FRACTION}x${SCALE_FRACTION}"
+			else
+				scale_ui "${SCALE}"
+				SCALE_PARAM='1x1'
+			fi
 			xrandr --output "${DISPLAY_ID}" \
 				--mode "${RESOLUTION}" \
-				--scale "${SCALE}x${SCALE}"
+				--scale "${SCALE_PARAM}"
 			if test "${?}" == '0'; then
 				echo 'resolution-scale' > "${STATE_DIR}/state"
 			else
@@ -492,8 +487,18 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 			;;
 
 		('scale')
+			if test "${SCALE#*.}" != "${SCALE}"; then
+				INTEGER="${SCALE%.*}"
+				FRACTION="${SCALE#*.}"
+				scale_ui "$((INTEGER+1))"
+				SCALE_FRACTION="$(echo "(1-0.${FRACTION})+1" | bc)"
+				SCALE_PARAM="${SCALE_FRACTION}x${SCALE_FRACTION}"
+			else
+				scale_ui "${SCALE}"
+				SCALE_PARAM='1x1'
+			fi
 			xrandr --output "${DISPLAY_ID}" \
-				--scale "${SCALE}"
+				--scale "${SCALE_PARAM}"
 			if test "${?}" == '0'; then
 				echo 'scale' > "${STATE_DIR}/state"
 			else
