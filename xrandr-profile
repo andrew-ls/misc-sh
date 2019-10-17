@@ -232,8 +232,14 @@ elif test "${reset_resolution}"; then
 elif test "${reset_scale}"; then
 	ACTION='reset-scale'
 elif test "${resolution}"; then
-	ACTION='resolution'
-	RESOLUTION="${resolution}"
+	if test "${scale}"; then
+		ACTION='resolution-scale'
+		RESOLUTION="${resolution}"
+		SCALE="${scale}"
+	else
+		ACTION='resolution'
+		RESOLUTION="${resolution}"
+	fi
 elif test "${scale}"; then
 	ACTION='scale'
 	SCALE="${SCALE}"
@@ -469,6 +475,17 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 				--mode "${RESOLUTION}"
 			if test "${?}" == '0'; then
 				echo 'resolution' > "${STATE_DIR}/state"
+			else
+				exit 1
+			fi
+			;;
+
+		('resolution-scale')
+			xrandr --output "${DISPLAY_ID}" \
+				--mode "${RESOLUTION}" \
+				--scale "${SCALE}x${SCALE}"
+			if test "${?}" == '0'; then
+				echo 'resolution-scale' > "${STATE_DIR}/state"
 			else
 				exit 1
 			fi
