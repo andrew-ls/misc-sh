@@ -23,7 +23,7 @@
 IFS="$(printf ' \t\n!')"; IFS="${IFS%!}"
 export LC_ALL='C'
 
-TEMP_DIR='/tmp/xrandr-profile'
+TEMP_DIR="/tmp/xrandr-profile-$(date +%Y%m%d%H%M%S)"
 
 unset -v \
 	ACTION
@@ -32,7 +32,7 @@ unset -v \
 	scale \
 	toggle_dpi \
 	toggle_scale
-while test "${#}" -gt '0'; do
+while test "${#}" -gt 0; do
 	case "${1}" in
 		( '-r' \
 		| '--r' \
@@ -63,11 +63,10 @@ while test "${#}" -gt '0'; do
 		| '--togg' \
 		| '--toggl' \
 		| '--toggle-' )
-			printf '%s: %s: '\''%s'\'' '\''%s'\''\n' \
+			printf '%s: %s: %s\n' \
 				'xrandr-profile' \
-				'option '\'"${1}"\'' is ambiguous; possibilities' \
-				'--toggle-dpi' \
-				'--toggle-scale' \
+				"option '${1}' is ambiguous; possibilities" \
+				"'--toggle-dpi' '--toggle-scale'" \
 				>&2
 			exit 1
 			;;
@@ -101,18 +100,18 @@ get_primary_display_id_dev() {(
 
 	printf '%s\n' "$(
 		for DIR in $(
-			find '/sys/devices' -type 'd' \
+			find '/sys/devices' -type d \
 			| sort
 		); do
 			if \
-				test -f "${DIR}"'/edid' \
-				&& test "$(cat "${DIR}"'/enabled')" = 'enabled'
+				test -f "${DIR}/edid" \
+				&& test "$(cat "${DIR}/enabled")" = 'enabled'
 			then
 				basename "$(printf '%s\n' "${DIR}")"
 			fi
 		done
 	)" \
-	| head -n '1'
+	| head -n 1
 )}
 
 get_primary_display_id_xrandr() {(
@@ -121,20 +120,20 @@ get_primary_display_id_xrandr() {(
 		s/^\([^[:space:]]\{1,\}\)[[:space:]]\{1,\}connected[[:space:]]\{1,\}primary[[:space:]]\{1,\}.*/\1/p;
 	' \
 	| sort \
-	| head -n '1'
+	| head -n 1
 )}
 
 get_display_manufacturer_model() {(
 	DISPLAY_ID_DEV="${1:?}"
 	< "$(
-		find '/sys/devices' -type 'd' \
-		| grep "${DISPLAY_ID_DEV}"'$' \
+		find '/sys/devices' -type d \
+		| grep "${DISPLAY_ID_DEV}\$" \
 		| sort \
-		| head -n '1'
-	)"'/edid' \
+		| head -n 1
+	)/edid" \
 	edid-decode \
 	| grep '^Manufacturer:' \
-	| cut -d ':' -f '2-' \
+	| cut -d ':' -f 2- \
 	| sed 's/\(.*\)Serial Number.*/\1/' \
 	| sed '
 		s/^[[:space:]]*//;
@@ -145,14 +144,14 @@ get_display_manufacturer_model() {(
 get_display_name() {(
 	DISPLAY_ID_DEV="${1:?}"
 	< "$(
-		find '/sys/devices' -type 'd' \
-		| grep "${DISPLAY_ID_DEV}"'$' \
+		find '/sys/devices' -type d \
+		| grep "${DISPLAY_ID_DEV}\$" \
 		| sort \
-		| head -n '1'
-	)"'/edid' \
+		| head -n 1
+	)/edid" \
 	edid-decode \
 	| grep '^Monitor name:' \
-	| cut -d ':' -f '2-' \
+	| cut -d ':' -f 2- \
 	| sed '
 		s/^[[:space:]]*//;
 		s/[[:space:]]$//;
@@ -170,8 +169,8 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 
 	if test "${ACTION}" = 'toggle-dpi'; then
 		if \
-			test -f "${TEMP_DIR}"'/state' \
-			&& test "$(cat "${TEMP_DIR}"'/state')" != 'scale'
+			test -f "${TEMP_DIR}/state" \
+			&& test "$(cat "${TEMP_DIR}/state")" != 'scale'
 		then
 			ACTION='scale'
 		else
@@ -180,7 +179,7 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 	fi
 
 	if test "${ACTION}" = 'toggle-scale'; then
-		if test -f "${TEMP_DIR}"'/state'; then
+		if test -f "${TEMP_DIR}/state"; then
 			ACTION='reset-scale'
 		else
 			ACTION='scale'
@@ -219,52 +218,52 @@ if test "${XDG_SESSION_TYPE}" = 'x11'; then
 			case "${DISPLAY_NAME_FRIENDLY}" in
 				('HP Spectre x360 13-ae003na')
 					xrandr --output "${DISPLAY_ID}" \
-						--mode '1920x1080' \
-						--scale '1x1'
+						--mode 1920x1080 \
+						--scale 1x1
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
-						'[{'\''Gdk/WindowScalingFactor'\'', <1>}]'
-					echo 'dpi-96' > "${TEMP_DIR}"'/state'
+						"[{'Gdk/WindowScalingFactor', <1>}]"
+					echo 'dpi-96' > "${TEMP_DIR}/state"
 					;;
 				('LG 27UD68P 4K Monitor')
 					xrandr --output "${DISPLAY_ID}" \
-						--mode '2560x1440' \
-						--scale '1x1'
+						--mode 2560x1440 \
+						--scale 1x1
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
-						'[{'\''Gdk/WindowScalingFactor'\'', <1>}]'
-					echo 'dpi-96' > "${TEMP_DIR}"'/state'
+						"[{'Gdk/WindowScalingFactor', <1>}]"
+					echo 'dpi-96' > "${TEMP_DIR}/state"
 					;;
 			esac
 			;;
 
 		('reset-scale')
-			xrandr --output "${DISPLAY_ID}" --scale '1x1'
-			rm "${TEMP_DIR}"'/state'
+			xrandr --output "${DISPLAY_ID}" --scale 1x1
+			rm "${TEMP_DIR}/state"
 			;;
 
 		('scale')
 			case "${DISPLAY_NAME_FRIENDLY}" in
 				('GPD Win 2')
-					xrandr --orientation 'right'
+					xrandr --orientation right
 					;;
 				('HP Spectre x360 13-ae003na')
 					xrandr --output "${DISPLAY_ID}" \
-						--mode '3840x2160' \
-						--scale '1x1'
+						--mode 3840x2160 \
+						--scale 1x1
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
-						'[{'\''Gdk/WindowScalingFactor'\'', <2>}]'
-					echo 'scale' > "${TEMP_DIR}"'/state'
+						"[{'Gdk/WindowScalingFactor', <2>}]"
+					echo 'scale' > "${TEMP_DIR}/state"
 					;;
 				('LG 27UD68P 4K Monitor')
 					xrandr --output "${DISPLAY_ID}" \
-						--mode '3840x2160' \
-						--scale '1.5x1.5'
+						--mode 3840x2160 \
+						--scale 1.5x1.5
 					gsettings set \
 						org.gnome.settings-daemon.plugins.xsettings overrides \
-						'[{'\''Gdk/WindowScalingFactor'\'', <2>}]'
-					echo 'scale' > "${TEMP_DIR}"'/state'
+						"[{'Gdk/WindowScalingFactor', <2>}]"
+					echo 'scale' > "${TEMP_DIR}/state"
 					;;
 			esac
 			;;
